@@ -1,1 +1,1 @@
-ITEMS="bash_profile muttrc"
+ITEMS="bash_profile muttrc zshrc config/mimi/mime.conf"

@@ -17,7 +17,8 @@ SCRIPTPATH=`dirname "$SCRIPT"`
 cd "$SCRIPTPATH"
 
 # default files to take care of
-ITEMS="bashrc bash_functions config/geany tmux.conf  Xresources"
+# have put others in updaterc file DK
+ITEMS="bashrc bash_functions config/geany tmux.conf "
 # source rcfile if exists, useful to change ITEMS
 if [ -e updaterc ]; then . updaterc ; fi
 
