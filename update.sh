@@ -1,23 +1,5 @@
 #!/bin/bash
 #
-# Copyright (c) 2017 Mathieu Roy <yeupou--gnu.org>
-#      http://yeupou.wordpress.com
-#
-#   This program is free software; you can redistribute it and/or modify
-#   it under the terms of the GNU General Public License as published by
-#   the Free Software Foundation; either version 2 of the License, or
-#   (at your option) any later version.
-#
-#   This program is distributed in the hope that it will be useful,
-#   but WITHOUT ANY WARRANTY; without even the implied warranty of
-#   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-#   GNU General Public License for more details.
-#
-#   You should have received a copy of the GNU General Public License
-#   along with this program; if not, write to the Free Software
-#   Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307
-#   USA
-
 # PURPOSE:
 # keep a copy of each file per hostname
 # - if we only have the original, save it in the repository
@@ -35,7 +17,7 @@ SCRIPTPATH=`dirname "$SCRIPT"`
 cd "$SCRIPTPATH"
 
 # default files to take care of
-ITEMS="bashrc config/geany tmux.conf  Xdefaults"
+ITEMS="bashrc bash_functions config/geany tmux.conf  Xdefaults"
 # source rcfile if exists, useful to change ITEMS
 if [ -e updaterc ]; then . updaterc ; fi
 
@@ -60,7 +42,8 @@ cp_rc() {
 for item in $ITEMS; do
     # defines local and repository files
     item_LOCAL="$HOME/.$item"
-    item_REPOSITORY="$SCRIPTPATH/$item.$HOSTNAME"
+    #item_REPOSITORY="$SCRIPTPATH/$item.$HOSTNAME"
+    item_REPOSITORY="$SCRIPTPATH/$item"
     item_REPOSITORY_DEFAULT="$SCRIPTPATH/$item.default"
 
     # always reset vars used by cp_rc()
