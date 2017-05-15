@@ -1,0 +1,15 @@
+#!/bin/bash
+# from https://bbs.archlinux.org/viewtopic.php?id=80145&p=4
+#needs  xsel and locate installed (locate is part of the mlocate package on Arch)
+if [ -f $HOME/.dmenurc ]; then
+	. $HOME/.dmenurc
+else
+	DMENU='dmenu -i'
+fi
+
+input="$(xsel -o | $DMENU -p "file search":)"
+if [ "$input" != '' ]
+then
+	result="$(echo "$input" | locate -e -r "$input" | $DMENU -p "search result:" )"
+	xdg-open "$result"
+fi

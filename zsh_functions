@@ -1,0 +1,721 @@
+# zz - smart directory changer, called by alias z for short 
+# 14dec2015  +chris+
+# 15dec2015  +chris+ clean up nonexisting paths
+chpwd_zz() {
+  print -P '0\t%D{%s}\t1\t%~' >>~/.zz
+}
+zz() {
+  awk -v ${(%):-now='%D{%s}'} <~/.zz '
+    function r(t,f) {
+      age = now - t
+      return (age<3600) ? f*4 : (age<86400) ? f*2 : (age<604800) ? f/2 : f/4
+    }
+    { f[$4]+=$3; if ($2>l[$4]) l[$4]=$2 }
+    END { for(i in f) printf("%d\t%d\t%d\t%s\n",r(l[i],f[i]),l[i],f[i],i) }' |
+      sort -k2 -n -r | sed 9000q | sort -n -r -o ~/.zz
+  if (( $# )); then
+    local p=$(awk 'NR != FNR { exit }  # exit after first file argument
+                   { for (i = 3; i < ARGC; i++) if ($4 !~ ARGV[i]) next
+                     print $4; exit }' ~/.zz ~/.zz "$@")
+    [[ $p ]] || return 1
+    local op=print
+    [[ -t 1 ]] && op=cd
+    if [[ -d ${~p} ]]; then
+      $op ${~p}
+    else
+      # clean nonexisting paths and retry
+      while read -r line; do
+        [[ -d ${~${line#*$'\t'*$'\t'*$'\t'}} ]] && print -r $line
+      done <~/.zz | sort -n -r -o ~/.zz
+      zz "$@"
+    fi
+  else
+    sed 10q ~/.zz
+  fi
+}
+alias z=' zz'
+###
+# Image uploadig to imgur
+# I changed the client id for mine DK
+# my client secret id is   5884c7ae559c44c96c64e4c9bfc78d1969958d68
+imgur() {
+  curl -H "Authorization: Client-ID 35b3c3b4714771a" -F image=@$1 \
+    https://api.imgur.com/3/upload | sed 's/.*http/http/; s/".*/\n/; s,\\/,/,g'
+}
+####
+show-paths() {
+echo $PATH | awk '{ n = split($0, paths, ":"); for (i=0; ++i <= n;) print i, paths[i] }'
+}
+#######
+# cd into dir containing a specifig program in you path
+# ie cdp edit-configs
+
+cdp() {
+	local prog="$1"
+	type "$prog" &>/dev/null
+	if [ "$?" -ne 0 ]; then
+		echo "\"${prog}\" not found in \$PATH." >&2
+	else
+		dir=$(dirname $(which "$prog"))
+		echo "$dir"
+		cd "$dir"
+	fi
+}
+#######
+chmod-all() {
+while [ 1 ]
+do
+        echo "cleansing permissions"
+        find . -type f -exec chmod -v 700 {} \;
+
+        break
+
+done
+}
+########
+functime(){
+	clear
+	echo "------------------------------"
+	date
+	echo "------------------------------"
+}
+######## check stock, type stock slv or whatever
+stock () 
+{ 
+lynx -dump "http://www.google.com/finance?client=ob&q=${1}" | sed 's/.*']'//' | perl -00ne "print if /Watch this stock/i" | sed 's/Watch this stock//' | sed 's/Disclaimer//' | sed '/^$/d' | sed 's/Currency in USD//'
+}
+###########
+# sound outputs
+# from Gotbletus vid and webnotes
+# Notes for the video: https://www.youtube.com/watch?v=jhv-2pNWfr4
+# credits: http://askubuntu.com/a/18210
+
+pa-list() { pacmd list-sinks | awk '/index/ || /name:/' ;} #lists your devices
+#below function swtiches all your playing apps to sink1
+    # on my system 0 is default
+    # 1 is usb speakers and 2 is Samson gomic BUT these are not fixed, sometimes 3 is usb speakers
+   #you type pa-set 0 or pa-set 1 for usb output, working DK
+    pa-set() { 
+    	# list all apps in playback tab (ex: cmus, mplayer, vlc)
+    	inputs=($(pacmd list-sink-inputs | awk '/index/ {print $2}')) 
+    	# set the default output device
+    	pacmd set-default-sink $1 &> /dev/null
+    	# apply the changes to all running apps to use the new output device
+    	for i in ${inputs[*]}; do pacmd move-sink-input $i $1 &> /dev/null; done
+    }
+    pa-playbacklist() { 
+    	# list individual apps
+    	echo "==============="
+    	echo "Running Apps"
+    	pacmd list-sink-inputs | awk '/index/ || /application.name /'
+    
+    	# list all sound device
+    	echo "==============="
+    	echo "Sound Devices"
+    	pacmd list-sinks | awk '/index/ || /name:/'
+    }
+    pa-playbackset() { 
+    	# set the default output device
+    	pacmd set-default-sink "$2" &> /dev/null
+    	# apply changes to one running app to use the new output device
+    	pacmd move-sink-input "$1" "$2" &> /dev/null
+    }
+
+
+
+######## ARCHWIKI SEARCH FUNCTION -uses lynx and w3m ##
+archwiki() {
+echo -n -e "\n============================================\n\tWelcome to Arch Wiki Search"; echo ""; i=1 ; for line in $(lynx --dump "https://wiki.archlinux.org/index.php?title=Special%3ASearch&profile=default&search=$1" | grep https://wiki.archlinux.org/ | cut -c7-); do echo $i $line; lines[$i]=$line ; i=$(($i+1)); done ; echo -n -e "\n============================================\n\tPlease select the link to open - "; read answer; w3m ${lines[$answer]}
+}
+############### cheat zsh autocomplete; add to ~/.zshrc or .zsh_functions
+_cmpl_cheat() {
+	reply=($(cheat -l | cut -d' ' -f1))
+}
+compctl -K _cmpl_cheat cheat
+
+############ DICTIONARY FUNCTION ##
+dword () { curl dict://dict.org/d:${1}:wn; }
+# Dictionary | Usage define <foo>
+define() {
+    curl -s dict://dict.org/d:$1 | grep -v '^[0-9]'
+}
+########## The below function is for launching gui apps like textadpet or sublime from the terminal
+# you comine it with alias's like
+alias subtext='launch sublime'
+alias tadept='launch textadept'
+launch() {
+    ( $* &> /dev/null & )
+}
+########## could have a serparate .hints file and source it here
+hint-vim-search-replace() { # {{{
+cat <<EOF
+:s/foo/bar/g		 Change each 'foo' to 'bar' in the current line.
+:%s/foo/bar/g		 Change each 'foo' to 'bar' in all lines.
+:5,12s/foo/bar/g	 Change each 'foo' to 'bar' for all lines from line 5 to line 12 inclusive.
+:'a,'bs/foo/bar/g	 Change each 'foo' to 'bar' for all lines from mark a to mark b inclusive.
+:.,$s/foo/bar/g		 Change each 'foo' to 'bar' for all lines from the current line (.)
+						to the last line ($) inclusive.
+:.,+2s/foo/bar/g	 Change each 'foo' to 'bar' for the current line (.) and the two next lines (+2).
+:%s/foo/bar/g		 Equivalent to :1,$s/foo/bar/g (change all lines).
+:g/^baz/s/foo/bar/g	 Change each 'foo' to 'bar' in each line starting with 'baz'.
+EOF
+}
+#########============
+# A shortcut function that simplifies usage of xclip.
+# - Accepts input from either stdin (pipe), or params.
+# ------------------------------------------------
+cb() {
+  local _scs_col="\e[0;32m"; local _wrn_col='\e[1;31m'; local _trn_col='\e[0;33m'
+  # Check that xclip is installed.
+  if ! type xclip > /dev/null 2>&1; then
+    echo -e "$_wrn_col""You must have the 'xclip' program installed.\e[0m"
+  # Check user is not root (root doesn't have access to user xorg server)
+  elif [[ "$USER" == "root" ]]; then
+    echo -e "$_wrn_col""Must be regular user (not root) to copy a file to the clipboard.\e[0m"
+  else
+    # If no tty, data should be available on stdin
+    if ! [[ "$( tty )" == /dev/* ]]; then
+      input="$(< /dev/stdin)"
+    # Else, fetch input from params
+    else
+      input="$*"
+    fi
+    if [ -z "$input" ]; then  # If no input, print usage message.
+      echo "Copies a string to the clipboard."
+      echo "Usage: cb <string>"
+      echo "       echo <string> | cb"
+    else
+      # Copy input to clipboard
+      echo -n "$input" | xclip -selection c
+      # Truncate text for status
+      if [ ${#input} -gt 80 ]; then input="$(echo $input | cut -c1-80)$_trn_col...\e[0m"; fi
+      # Print status.
+      echo -e "$_scs_col""Copied to clipboard:\e[0m $input"
+    fi
+  fi
+}
+# Aliases / functions leveraging the cb() function
+# ------------------------------------------------
+# Copy contents of a file
+function cbf() { cat "$1" | cb; }
+# Copy SSH public key
+alias cbssh="cbf ~/.ssh/id_rsa.pub"
+# Copy current working directory
+alias cbwd="pwd | cb"
+# Copy most recent command in bash history
+alias cbhs="cat $HISTFILE | tail -n 1 | cb"
+#############===============
+slmenu-test() {
+selected="$(cat ~/.snippetrc | sed '/^$/d' | sort -n | slmenu -e -i )"
+
+result=$(echo "$selected" | sed -e s/\;\;\.\*\$// | sed 's/^[ \t]*//;s/[ \t]*$//' | slmenu )
+cmd=$(echo "$result" | cut -d' ' -f2-)
+[ -n "$cmd" ] && eval setsid setsid "$cmd"
+}
+# -------------------------
+######## type  unpack filetounpack.zip
+unpack() {
+    for file in "$@"; do
+        if [ -f "$file" ]; then
+            local file_type=$(file -bizL "$file")
+            case "$file_type" in
+                *application/x-tar*|*application/zip*|*application/x-zip*|*application/x-cpio*)
+                    bsdtar -x -f "$file" ;;
+                *application/x-gzip*)
+                    gunzip -d -f "$file" ;;
+                *application/x-bzip*)
+                    bunzip2 -f "$file" ;;
+                *application/x-rar*)
+                    7z x "$file" ;;
+                *application/octet-stream*)
+                    local file_type=$(file -bzL "$file")
+                    case "$file_type" in
+                        7-zip*) 7z x "$file" ;;
+                        *) echo -e "Unknown filetype for '$file'\n$file_type" ;;
+                    esac ;;
+                *)
+                    echo -e "Unknown filetype for '$file'\n$file_type" ;;
+            esac
+        else
+            echo "'$file' is not a valid file"
+        fi
+    done
+}
+#forgot I already had this function by Helmut which also works
+# ARCHIVE EXTRACTOR {{{
+    extract() {
+      clrstart="\033[1;34m"  #color codes
+      clrend="\033[0m"
+
+      if [[ "$#" -lt 1 ]]; then
+        echo -e "${clrstart}Pass a filename. Optionally a destination folder. You can also append a v for verbose output.${clrend}"
+        exit 1 #not enough args
+      fi
+
+      if [[ ! -e "$1" ]]; then
+        echo -e "${clrstart}File does not exist!${clrend}"
+        exit 2 #file not found
+      fi
+
+      if [[ -z "$2" ]]; then
+        DESTDIR="." #set destdir to current dir
+      elif [[ ! -d "$2" ]]; then
+        echo -e -n "${clrstart}Destination folder doesn't exist or isnt a directory. Create? (y/n): ${clrend}"
+        read response
+        #echo -e "\n"
+        if [[ $response == y || $response == Y ]]; then
+          mkdir -p "$2"
+          if [ $? -eq 0 ]; then
+            DESTDIR="$2"
+          else
+            exit 6 #Write perms error
+          fi
+        else
+          echo -e "${clrstart}Closing.${clrend}"; exit 3 # n/wrong response
+        fi
+      else
+        DESTDIR="$2"
+      fi
+
+      if [[ ! -z "$3" ]]; then
+        if [[ "$3" != "v" ]]; then
+          echo -e "${clrstart}Wrong argument $3 !${clrend}"
+          exit 4 #wrong arg 3
+        fi
+      fi
+
+      filename=`basename "$1"`
+
+      #echo "${filename##*.}" debug
+
+      case "${filename##*.}" in
+        tar)
+          echo -e "${clrstart}Extracting $1 to $DESTDIR: (uncompressed tar)${clrend}"
+          tar x${3}f "$1" -C "$DESTDIR"
+          ;;
+        gz)
+          echo -e "${clrstart}Extracting $1 to $DESTDIR: (gip compressed tar)${clrend}"
+          tar x${3}fz "$1" -C "$DESTDIR"
+          ;;
+        tgz)
+          echo -e "${clrstart}Extracting $1 to $DESTDIR: (gip compressed tar)${clrend}"
+          tar x${3}fz "$1" -C "$DESTDIR"
+          ;;
+        xz)
+          echo -e "${clrstart}Extracting  $1 to $DESTDIR: (gip compressed tar)${clrend}"
+          tar x${3}f -J "$1" -C "$DESTDIR"
+          ;;
+        bz2)
+          echo -e "${clrstart}Extracting $1 to $DESTDIR: (bzip compressed tar)${clrend}"
+          tar x${3}fj "$1" -C "$DESTDIR"
+          ;;
+        zip)
+          echo -e "${clrstart}Extracting $1 to $DESTDIR: (zipp compressed file)${clrend}"
+          unzip "$1" -d "$DESTDIR"
+          ;;
+        rar)
+          echo -e "${clrstart}Extracting $1 to $DESTDIR: (rar compressed file)${clrend}"
+          unrar x "$1" "$DESTDIR"
+          ;;
+        7z)
+          echo -e  "${clrstart}Extracting $1 to $DESTDIR: (7zip compressed file)${clrend}"
+          7za e "$1" -o"$DESTDIR"
+          ;;
+        *)
+          echo -e "${clrstart}Unknown archieve format!"
+          exit 5
+          ;;
+      esac
+    }
+#########==========================
+#use surfraw with dmenu
+dmsr() { surfraw "$(cat ~/.config/surfraw/bookmarks | sed '/^$/d' | sort -n | dmenu -i)" ;}
+# same but using it with fzf in terminal
+fzf-surfraw() { surfraw "$(cat ~/.config/surfraw/bookmarks | sed '/^$/d' | sort -n | fzf -e)" ;}
+# Ctrl W hotkey to run above function instead of typeing fzf-surfraw
+bindkey -s '^W' "fzf-surfraw\n"
+# this is for piping all the surfraw elvis into a dmenu menu
+# so say to search arckwiki you would type, archwiki searchterm, saves having to remember all the different elvi names
+srelvi() {
+sr $(sr -elvi | gawk '{ print $1 }' | dmenu -p search )
+}
+#######----------------------------------------------------------------------
+# fe [FUZZY PATTERN] - Open the selected file with the default editor
+#   - Bypass fuzzy finder if there's only one match (--select-1)
+#   - Exit if there's no match (--exit-0)
+# have also set up an alias called searchnotes that cd's to the text-files dir and then calles the below function
+fe() {
+  local file
+  file=$(fzf --query="$1" --select-1 --exit-0)
+  \[ -n "$file" \] && ${EDITOR:-vim} "$file"
+}
+#### Below find a file and open in default app like a jpg in sxiv etc
+fzf-locate() {
+  xdg-open "$(locate "*" | fzf -e -i )"
+  
+  # some programs require a longer time to load
+  sleep 1.5
+  
+  # if cancle or fail then exit
+  # if [ $? -ne 0 ]
+  # then
+  #  	exit
+  # fi
+}
+#  go into a folder say of text files and type fzfr geany  and the files you select will open in geany
+fzfr() { fzf -m -x | xargs -d'\n' -r "$@" ; }
+#### fkill - kill process
+fkill() {
+  pid=$(ps -ef | sed 1d | fzf -m | awk '{print $2}')
+
+  if [ "x$pid" != "x" ]
+  then
+    kill -${1:-9} $pid
+  fi
+}
+##### fd - cd to selected directory
+fd() {
+  local dir
+  dir=$(find ${1:-*} -path '*/\.*' -prune \
+                  -o -type d -print 2> /dev/null | fzf +m) &&
+  cd "$dir"
+}
+#### to use it to launch gui apps
+fzf-dmenu() {
+    # note: xdg-open has a bug with .desktop files, so we cant use that shit
+    selected="$(ls /usr/share/applications | fzf -e)"
+    nohup `grep '^Exec' "/usr/share/applications/$selected" | tail -1 | sed 's/^Exec=//' | sed 's/%.//'` >/dev/null 2>&1&
+}
+####### hotkey to run the above function (Ctrl+O)
+bindkey -s '^O' "fzf-dmenu\n"
+#########
+unalias cdg 2> /dev/null
+cdg() {
+   local dest_dir=$(cdscuts_glob_echo | fzf )
+   if [[ $dest_dir != '' ]]; then
+      cd "$dest_dir"
+   fi
+}
+####### ch - browse chrome/chromium history
+ch() {
+  local cols sep
+  cols=$(( COLUMNS / 3 ))
+  sep='{::}'
+
+  cp -f /home/dka/.config/chromium/Default/History /tmp/h
+
+  sqlite3 -separator $sep /tmp/h \
+    "select substr(title, 1, $cols), url
+     from urls order by last_visit_time desc" |
+  awk -F $sep '{printf "%-'$cols's  \x1b[36m%s\x1b[m\n", $1, $2}' |
+  fzf --ansi --multi | sed 's#.*\(https*://\)#\1#' | xargs chromium
+}
+#export -f cdg > /dev/null
+######=====================
+yt2mp3() { youtube-dl -c --restrict-filenames --extract-audio --audio-quality 0 --audio-format mp3 -o "%(title)s.%(ext)s" $@ ;}
+######===========
+# REMIND ME, ITS IMPORTANT! {{{
+    # usage: remindme <time> <text>
+    # e.g.: remindme 10m "omg, the pizza"
+remindme() { sleep $1 && zenity --info --text "$2" & }
+####==========================
+#This one for using the simple server script
+httpserver() { python2.7 ~/bin/SimpleHTTPServerWithUpload.py ${1:-8000} ;}
+#=================================================================================
+#### Standby and shutdown functions #######
+function standby()
+{
+systemctl suspend
+}
+function suspend()
+{
+systemctl suspend
+}
+function zzz()
+{
+systemctl suspend
+}
+
+function shutdown()
+{
+systemctl poweroff
+}
+#=====================================================================
+hm()
+{
+sleep 4s;
+xdotool type 'elwoode'
+sleep 0.5s
+xdotool type '@'
+xdotool type 'hotmail.co.uk'
+xdotool key Tab
+xdotool type 'hotmailkered0'
+xdotool key "Return"
+}
+#
+cbhm()
+{
+sleep 4s;
+xdotool type 'chrberendsen'
+sleep 0.5s
+xdotool type '@'
+xdotool type 'hotmail.com'
+xdotool key Tab
+xdotool type 'a$tnetk1n'
+xdotool key "Return"
+}
+#
+em()
+{
+sleep 4s;
+xdotool type 'elwoode'
+sleep 0.5s
+xdotool type '@'
+xdotool type 'hotmail.co.uk'
+}
+adent()
+{
+sleep 4s;
+xdotool type 'arthurdentgwm'
+sleep 0.5s
+xdotool type '@'
+sleep 0.5s
+xdotool type 'gmail.com'
+}
+#========================================================================
+####### notes functions below #############
+# Type webn to open web-notes in geany
+# Type qn then some text that you want adding to qnotes.txt
+#Type view-qn to open the file in text editor
+# Type todo  then some text to add it to your todo.txt file
+function webn() {
+  vim -c '$|startinsert!' ~/text-files/web-notes.txt
+}
+
+function qn() {
+  echo $(date)'\n'$@ >> ~/text-files-home/qnotes.txt
+}
+
+function view-qn() {
+	vim -c '$|startinsert!' ~/text-files-home/qnotes.txt
+}
+
+function mytodo() {
+  echo $@ >> ~/text-files-home/todo.txt
+}
+
+function view-todo() {
+  vim -c '$|startinsert!' ~/text-files-home/todo.txt
+}
+
+function view-clips() {
+ vim ~/quick-clippings
+}
+#To open vim in vimwiki
+vimwiki() {
+   vim -c :VimwikiIndex
+}
+## For Sopcast ####################################
+# gotbletu vid https://www.youtube.com/watch?v=Dm7cFjhzgHo
+#Add to .bashrc
+# install sopcast commandline version
+# Archlinux: sopcast ( x64 https://www.archlinux.org/packages/multilib/x86_64/sopcast/)
+# Archlinux: sopcast ( x32 https://www.archlinux.org/packages/community/i686/sopcast/)
+# Ubuntu/Debian: sp-auth (https://launchpad.net/~jason-scheunemann/+archive/ppa)
+
+# choose a players (cvlc is default)
+#SP_VIDPLAYER=mpv
+SP_VIDPLAYER=cvlc
+#SP_VIDPLAYER=vlc
+# SP_VIDPLAYER=(vlc --control=lirc)
+# SP_VIDPLAYER=mplayer
+#SP_VIDPLAYER=(mplayer -cache 1000)
+
+# wait X seconds to stabilize channel (make it longer if u got slower connection)
+SP_SLEEP=15
+
+# sopcast port and player port
+SP_LOCAL_PORT=55050
+SP_PLAYER_PORT=55051
+
+# manually kill sopcast (sometimes it doesnt exit properly and still uses bandwidth in the background)
+sppc-kill() { killall sp-sc ;}
+
+# kills existing connection, starts a new connection, sleep X sec to stabilize the stream, waits to player to exit and kill itself
+sppc() {
+killall sp-sc &>/dev/null
+(sp-sc "$1" $SP_LOCAL_PORT $SP_PLAYER_PORT &>/dev/null &)
+sleep $SP_SLEEP
+($SP_VIDPLAYER http://localhost:$SP_PLAYER_PORT)
+wait
+killall sp-sc
+}
+
+
+#### eng = english, ro = romanian, esp = espanol/spanish
+# added on February 06, 2014
+spp-doc-explorer.eng,ro() { sppc "sop://broker.sopcast.com:3912/149269" ;}
+spp-doc-history.eng,ro() { sppc "sop://broker.sopcast.com:3912/148253" ;}
+spp-doc-history2.eng,ro() { sppc "sop://broker.sopcast.com:3912/149268" ;}
+spp-doc-natgeo.eng,ro() { sppc "sop://broker.sopcast.com:3912/148248" ;}
+spp-doc-natgeowild.eng,ro() { sppc "sop://broker.sopcast.com:3912/148259" ;}
+spp-doc-nature.eng,ro() { sppc "sop://broker.sopcast.com:3912/149267" ;}
+spp-movie-hbo.eng,ro() { sppc "sop://broker.sopcast.com:3912/148883" ;}
+spp-movie-hbo2.eng,ro() { sppc "sop://broker.sopcast.com:3912/120702" ;}
+spp-tv-universal.eng,ro() { sppc "sop://broker.sopcast.com:3912/148255" ;}
+spp-tv-axn.eng,ro() { sppc "sop://broker.sopcast.com:3912/148257" ;}
+spp-tv-axncrime.eng,ro() { sppc "sop://broker.sopcast.com:3912/149261" ;}
+
+#######################################################
+
+
+
+#---------------------------------------------------
+#Called with "bu somefile" it puts a timestamped copy of whatever file in my Backups directory.
+bu () { cp "$1" ~/Backups/"$1"-`date +%Y%m%d%H%M`.backup ; }
+###################################
+# wiki is from from Alex Sánchez  functions setcion of his .zshrc
+# Search in wikipedia from the command line
+wiki() { dig +short txt $1.wp.dg.cx; }
+
+# Color man pages
+man() {
+    env LESS_TERMCAP_mb=$'\E[01;0m' \
+    LESS_TERMCAP_md=$'\E[01;38;5;6m' \
+    LESS_TERMCAP_me=$'\E[0m' \
+    LESS_TERMCAP_se=$'\E[0m' \
+    LESS_TERMCAP_so=$'\E[38;5;9m' \
+    LESS_TERMCAP_ue=$'\E[0m' \
+    LESS_TERMCAP_us=$'\E[04;38;5;2m' \
+    man "$@"
+}
+
+# Use Google's text to speech synthesis to play phrases from the cmd line
+say() {
+        # limit to 100 character or less
+        # language code: http://developers.google.com/translate/v2/using_rest#language-params
+        # useage: say <language code> <phase>
+        # example: say es come with me
+        # Original file:
+        # https://github.com/gotbletu/shownotes/blob/master/google_text_to_speech.txt
+        mplayer -user-agent Mozilla \
+        "http://translate.google.com/translate_tts?ie=UTF-8&tl="$1"&q=$(echo "$@" \
+        | cut -d ' ' -f2- | sed 's/ /\+/g')" > /dev/null 2>&1 ;}
+
+#
+#####################################
+# These are cut from .zshrc made by grml
+# useful functions
+
+## Backup \kbd{file {\rm to} file\_timestamp}
+bk() {
+    emulate -L zsh
+    cp -b $1 $1_`date --iso-8601=m`
+}
+
+## cd to directoy and list files
+cl() {
+    emulate -L zsh
+    cd $1 && ls -a
+}
+
+# smart cd function, allows switching to /etc when running 'cd /etc/fstab'
+cd() {
+    if (( ${#argv} == 1 )) && [[ -f ${1} ]]; then
+        [[ ! -e ${1:h} ]] && return 1
+        print "Correcting ${1} to ${1:h}"
+        builtin cd ${1:h}
+    else
+        builtin cd "$@"
+    fi
+}
+
+## Create Directoy and \kbd{cd} to it
+mkcd() {
+    if (( ARGC != 1 )); then
+        printf 'usage: mkcd <new-directory>\n'
+        return 1;
+    fi
+    if [[ ! -d "$1" ]]; then
+        command mkdir -p "$1"
+    else
+        printf '`%s'\'' already exists: cd-ing.\n' "$1"
+    fi
+    builtin cd "$1"
+}
+# grep for running process, like: 'any vim'
+any() {
+    emulate -L zsh
+    unsetopt KSH_ARRAYS
+    if [[ -z "$1" ]] ; then
+        echo "any - grep for process(es) by keyword" >&2
+        echo "Usage: any <keyword>" >&2 ; return 1
+    else
+        ps xauwww | grep -i "${grep_options[@]}" "[${1[1]}]${1[2,-1]}"
+    fi
+}
+
+
+## List files which have been accessed within the last {\it n} days, {\it n} defaults to 1
+accessed() {
+    emulate -L zsh
+    print -l -- *(a-${1:-1})
+}
+
+## List files which have been changed within the last {\it n} days, {\it n} defaults to 1
+changed() {
+    emulate -L zsh
+    print -l -- *(c-${1:-1})
+}
+
+## List files which have been modified within the last {\it n} days, {\it n} defaults to 1
+modified() {
+    emulate -L zsh
+    print -l -- *(m-${1:-1})
+}
+
+
+# Create small urls via http://goo.gl using curl(1).
+# API reference: https://code.google.com/apis/urlshortener/
+function zurl() {
+    emulate -L zsh
+    setopt extended_glob
+
+    if [[ -z $1 ]]; then
+        print "USAGE: zurl <URL>"
+        return 1
+    fi
+
+    local PN url prog api json contenttype item
+    local -a data
+    PN=$0
+    url=$1
+
+    # Prepend 'http://' to given URL where necessary for later output.
+    if [[ ${url} != http(s|)://* ]]; then
+        url='http://'${url}
+    fi
+
+    if check_com -c curl; then
+        prog=curl
+    else
+        print "curl is not available, but mandatory for ${PN}. Aborting."
+        return 1
+    fi
+    api='https://www.googleapis.com/urlshortener/v1/url'
+    contenttype="Content-Type: application/json"
+    json="{\"longUrl\": \"${url}\"}"
+    data=(${(f)"$($prog --silent -H ${contenttype} -d ${json} $api)"})
+    # Parse the response
+    for item in "${data[@]}"; do
+        case "$item" in
+            ' '#'"id":'*)
+                item=${item#*: \"}
+                item=${item%\",*}
+                printf '%s\n' "$item"
+                return 0
+                ;;
+        esac
+    done
+    return 1
+}

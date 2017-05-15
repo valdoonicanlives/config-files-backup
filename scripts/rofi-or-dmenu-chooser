@@ -1,0 +1,24 @@
+#!/bin/bash
+
+# Define a hash of menus
+# each item is a space-separated list of executable commands
+declare -A menus
+menus=(['web']="firefox chromium dwb qutebrowser opera"
+       ['mail']="thunderbird evolution"
+       ['terminal']="urxvt xterm")
+# Set $MENU to be all the keys of the menus hash
+MENU=${!menus[@]}
+
+while true; do
+  #CHOICE=$(echo -e $MENU | tr ' ' '\n' | dmenu)
+  CHOICE=$(echo -e $MENU | tr ' ' '\n' | rofi -dmenu)
+  if [ -z "${menus[$CHOICE]}" ]; then
+    # No hash key called $CHOICE - must be a command
+    break
+  else
+    # Select the menu chosen from dmenu output
+    MENU=${menus[$CHOICE]}
+  fi
+done
+
+exec $CHOICE

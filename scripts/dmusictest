@@ -1,0 +1,24 @@
+#!/bin/sh
+#uses mpc and dmenu
+# doesn't work
+artist=$(mpc list artist| sort -n | dmenu -fn "$DMENU_FONT" -nb "$DMENU_NORMBG" -nf "$DMENU_NORMFG" -sb "$DMENU_SELBG" -sf "$DMENU_SELFG" -i -p "ARTIST:" -l 10)
+
+if [[ $artist = '' ]]; then
+    exit
+else
+
+if [[ $(mpc list album artist "$artist" | wc -l) > 1 ]]; then
+    album=$(mpc list album artist "$artist"| sort -n | dmenu -fn "$DMENU_FONT" -nb "$DMENU_NORMBG" -nf "$DMENU_NORMFG" -sb "$DMENU_SELBG" -sf    "$DMENU_SELFG" -i -p "ALBUM:" -l 3)
+fi
+
+mpc clear >> /dev/null
+if [[ $album = '' ]]; then
+    echo "Playlist cleared, Adding all songs available from $artist to the playlist"
+    mpc find artist "$artist" | mpc add
+else
+    echo "Playlist cleared, Adding $artist - $album to the playlist"
+    mpc find artist "$artist" album "$album" | mpc add
+fi
+mpc play >> /dev/null
+fi
+exit 0

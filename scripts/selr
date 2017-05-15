@@ -1,0 +1,45 @@
+#!/usr/bin/env bash
+
+# selr  is name of this script (for select result) the og was sr but I use that for surfraw DK
+# Enumerate stdout from the previous search command line by line.
+# Enable opening a file by passing the desired opening program as an
+# argument and then select a number from the output.
+# Defaults to using `xdg-open` when no argument is passed.
+# Does only work for stdout that list the full path to a file or relative
+# the directory this script is being called from.
+
+# Aliases are not expanded within bash scripts.
+# Create a few aliases instead of importing entire alias file.
+case $1 in
+    '' )
+        opener='xdg-open'
+        ;;
+    'vim' )
+        opener='nvim'
+        ;;
+    'zh' )
+        opener='zathura'
+        ;;
+    * )
+        opener=$1
+esac
+
+# The default split delimiter in bash is any whitespace. Change this
+# to only split on newline in order to account for filenames with spaces.
+old_IFS="$IFS"
+IFS=$'\n'
+
+# Use tmux to copy the paragraph above. This specific navigation sequence
+# only works if each prompt is prefaced with a newline, such as from having
+# `precmd() { print "" }` in `.zshrc`
+tmux copy-mode
+tmux send-keys 2 { 3 j 0 space } enter
+# Results are saved in an array for clarity
+search_results+=$(tmux save-buffer -)
+select fname in $search_results; do
+    $opener "$fname"
+    break
+done
+
+# Set IFS back to default
+IFS="$old_IFS"

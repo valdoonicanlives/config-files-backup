@@ -1,0 +1,18 @@
+#!/bin/bash
+
+# Check for the QuickTerm
+qt="$(wmctrl -l | grep QuickTerm)"
+
+# Is QuickTerm open?
+
+if [ -z "$qt" ] ; then
+	# It's not open, so open it
+	urxvt -title QuickTerm &
+elif [ "$qt" == 1 ]; then
+#elif [ "$(xdotool getwindowfocus getwindowname)" == "QuickTerm" ] ; then
+	# It's currently active, so close it
+	wmctrl -c QuickTerm
+else
+	# It's not currently active, so move it to the current workspace and make it active
+	wmctrl -R QuickTerm 
+fi

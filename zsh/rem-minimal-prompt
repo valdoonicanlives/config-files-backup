@@ -1,0 +1,33 @@
+#                 ██      
+#                ░██      
+#  ██████  ██████░██      
+# ░░░░██  ██░░░░ ░██████  
+#    ██  ░░█████ ░██░░░██ 
+#   ██    ░░░░░██░██  ░██ 
+#  ██████ ██████ ░██  ░██ 
+# ░░░░░░ ░░░░░░  ░░   ░░  
+#
+#  ▓▓▓▓▓▓▓▓▓▓
+# ░▓ author ▓ xero <x@xero.nu>
+# ░▓ code   ▓ http://code.xero.nu/dotfiles
+# ░▓ mirror ▓ http://git.io/.files
+# ░▓▓▓▓▓▓▓▓▓▓
+# ░░░░░░░░░░
+#
+# Status:
+# - was there an error?
+# - are there background jobs?
+# - are we in a ranger session?
+prompt_magicmace_status() {
+  local symbols=""
+
+  [[ ${RETVAL} -ne 0 ]]          && symbols+="${COLOR_ERROR}${RETVAL}${COLOR_NORMAL}"  # $? for error.
+  [[ $(jobs -l | wc -l) -gt 0 ]] && symbols+='b' # 'b' for background.
+  [[ ${RANGER_LEVEL} -ne 0 ]]    && symbols+='r' # 'r' for... you guessed it!
+
+  [[ -n ${symbols} ]] && print -n "─${COLOR_NORMAL}${symbols}${COLOR_USER_LEVEL}─"
+}
+#
+#█▓▒░ minial prompt
+#PROMPT='${USER_LEVEL}$(prompt_magicmace_status)[%F{white}%~${USER_LEVEL}]$(prompt_git_info)── >>%f '
+PROMPT='${USER_LEVEL}$(prompt_magicmace_status)[%F{white}%~${USER_LEVEL}]>>%f '

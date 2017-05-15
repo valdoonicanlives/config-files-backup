@@ -1,0 +1,25 @@
+#!/bin/sh
+#
+# d-edit: Use dmenu to open and edit a file from a given list.
+# Dk I changed it to now list all the text files in a certain folder - that's easier than having to edit a list all the time.
+
+# Global variables:
+#FILES=${1:-"/home/boo/.config/dmenu/edit-list"}
+FILES=${1:-"/home/dka/text-files-home/"}
+
+
+if [ -f $XDG_CONFIG_HOME/dmenu/dmenurc ]; then
+  . $XDG_CONFIG_HOME/dmenu/dmenurc
+else
+  DMENU='dmenu -i -l 26' #the number at the end is the number of files to show
+fi
+
+EDITOR=geany
+# Show list of options
+#choice=$(awk '{print $1}' $FILES | $DMENU -p "File to edit:")
+choice=$(ls -1 "${FILES}" | $DMENU -p "File to edit:")
+
+
+if [ "$choice" ]; then
+    $EDITOR "${FILES}/${choice}"
+fi

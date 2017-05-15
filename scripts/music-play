@@ -1,0 +1,23 @@
+#!/bin/bash
+# uses mpg123 or mpv
+cd /home/dka/music/shared-music/
+# only lists music in parent dir not subdirs within
+INPUT=$1
+PLAYER="mpg123 -q"                      # mpg123, mpg321, madplay, mpv, mplayer
+MP3FULL=~/.mp3list                      # where to put the mp3list
+MP3=~/.mp3list_grep                     # if $1 is used, grep
+shopt -s extglob globstar
+trap "{ rm -f $MP3 $MP3FULL ; exit 255; }" EXIT SIGINT SIGTERM
+printf '%s\n' ***.@(mp3|ogg|mpeg3) > $MP3FULL # add or remove what you like, here
+#printf /home/dka/music/shared-music/.@(mp3|ogg) > $MP3FULL # add or remove what you like, here
+[[ -n $1 ]] && cat $MP3FULL | grep $1 > $MP3
+[[ -z $1 ]] && cat $MP3FULL > $MP3
+readarray -t arr < $MP3
+play ()
+{
+        select opt in "${arr[@]}"; do
+        echo "Press Ctrl-C to stop playing"
+        $PLAYER "$opt"
+        done
+}
+play

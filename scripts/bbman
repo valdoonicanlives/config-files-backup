@@ -1,0 +1,69 @@
+#!/bin/bash
+
+mkdir -p $HOME/.bks
+mkdir -p $HOME/.bks/cache
+touch $HOME/.bks/list
+
+cachefolder=$HOME/.bks/cache
+list=$HOME/.bks/list
+add(){
+overwrite=lulz
+url=$1
+cachefile=$cachefolder/${url}-$(date "+%Y-%m-%d").html
+count=$(grep "$url" "$list" | wc -l)
+if [ $count -gt 0 ]
+then
+read -p "$url already exists, overwrite? y/N " overwrite
+fi
+
+case $overwrite in
+y|Y)
+echo "**OVERWRITING**"
+over=y
+;;
+lulz)
+;;
+n|N|*)
+exit 0
+;;
+esac
+
+read -p "Description please: " desc
+read -p "Tag this please: " tags
+
+if [ "$over" = "y" ]
+then
+grep -v "^${url}" $list > .temp ; mv .temp $list
+echo $list
+fi
+echo $over
+echo "$url | $desc | $tags" >> $list
+curl -s $url > $cachefile
+}
+
+search(){
+term=$@
+grep $term $list
+}
+
+sync(){
+url=$1
+cachefile=$cachefolder/${url}-$(date "+%Y-%m-%d").html
+curl -s $url > $cachefile
+}
+
+command=$1
+case $command in
+add)
+add $2
+;;
+search)
+search ${*:2}
+;;
+sync)
+sync $2
+;;
+*)
+echo usage
+;;
+esac    

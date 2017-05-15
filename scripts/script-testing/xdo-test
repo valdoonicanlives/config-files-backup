@@ -1,0 +1,10 @@
+#!/bin/bash 
+# can use double quotes too "elwoode"
+sleep 4s;
+xdotool type 'elwoode'
+xdotool type '@'
+xdotool type 'hotmail.co.uk'
+xdotool key Tab
+xdotool type 'kered0'
+xdotool key "Return"
+exit

@@ -1,0 +1,14 @@
+#!/bin/bash
+# FILE : bbflop.sh
+# Function: Flops all images in a directory. Creates mirror image Left-Right.
+# Copyright (C) 2006 Dave Crouse <dave NOSPAMat usalug.org>
+# ------------------------------------------------------------------------ #
+if [[ -z $( type -p convert ) ]]; then echo -e "ImageMagick -- NOT INSTALLED !";exit ;fi
+
+export IFS=$'\n';
+for i in $(find . -maxdepth 1 -type f -iname "*.jpg");
+do
+echo "Flopping ${i:2}"
+convert -flop ${i:2} new_${i:2}; mv new_${i:2} ${i:2}
+done
+exit 0

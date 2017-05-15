@@ -1,0 +1,2 @@
+#!/usr/bin/env sh
+for i in ws:1 ws:2 ws:3 ws:4; do echo $i; done | dzen2 -m h -l 4 -p -e 'button1=menuprint;button3=exit'

@@ -1,0 +1,23 @@
+#!/bin/bash
+
+MENU_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
+source $MENU_DIR/lib/menu_helpers.sh
+
+mainMenu="[Chapter]
+[DvdNav]
+[Nav+MouseMovement]"
+
+action=$(menu "Option: " "$mainMenu")
+case "$action" in
+    *'Chapter'*)
+        chapter=$(menu "Chapter #: ")
+        $(mpv dvd://$chapter)
+    ;;
+    *'DvdNav'*)
+        $(mpv dvdnav://)
+    ;;
+    *'Nav+MouseMovement'*)
+        $(mpv -mouse-movements dvdnav://)
+    ;;
+esac
+

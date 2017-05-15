@@ -1,0 +1,27 @@
+#!/bin/sh
+#adapted from a script by Skanky - with the help of Skanky!
+# d-edit: Use dmenu to open websites from a given list.
+# working DK i adapted it as the original was to open text files in an editor
+
+# Global variables:
+#URLS=${1:-"/home/dka/.urlbms"}
+URLS=${1:-"/home/dka/.config/bookmarks"}
+BROWSER=firefox
+
+#below is abt the appearance of dmenu what settings to use the settings in my.dmenurc only allow for 20 in the list
+if [ -f $XDG_CONFIG_HOME/.dmenurc ]; then
+  . $XDG_CONFIG_HOME/.dmenurc
+else
+  DMENU='dmenu -i -l 25'
+fi
+#
+# Show list of options the number 2 in the {print $2} part means only show column 2 from the website list
+# columns being separated by a simple space
+# www.yutube.com youtube    so only youtube is shown
+# the -F# command tells it that # is the separator not just a space as is default
+choice=$(awk -F# '{print $2}' $URLS | $DMENU -p "website to open:")
+
+if [[ $choice ]]; then
+    firefox $(awk '$2 ~ /'$choice'/ { print $1 }' $URLS)
+fi
+

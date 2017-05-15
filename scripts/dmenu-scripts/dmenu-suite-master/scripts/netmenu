@@ -1,0 +1,21 @@
+#!/bin/bash
+# This script assumes you can run "netctl" as a user through sudo without
+# entering a password. This can be done by editing /etc/sudoers via visudo.
+
+MENU_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
+source $MENU_DIR/lib/menu_helpers.sh
+
+netchoices="$(netctl list)"
+other="
+[Wifi-Menu]"
+
+choice=$(menu "Wifi: " "$(echo "$netchoices $other" | sed 's/^ *//')")
+[[ -z "$choice" ]] && exit
+
+if [[ "$choice" == "[Wifi-Menu]" ]]; then
+    $TERMINAL -e sh -c "sudo wifi-menu"
+else
+    # $choice = $(echo "$choice" | cut -c 3-)
+    notify-send "Netctl:" "Switching to profile \"$choice\""
+    sudo netctl switch-to "$choice"
+fi

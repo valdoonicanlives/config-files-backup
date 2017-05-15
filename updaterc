@@ -1,1 +1,1 @@
-ITEMS="bash_profile muttrc zshrc i3 config/mimi config/nvim config/ranger config/robot config/rofi-surfraw config/Surfingkeys config/sxhkd"
+ITEMS="bash_profile muttrc zshrc i3 scripts zsh  zsh_functions config/mimi config/nvim config/ranger config/robot config/rofi-surfraw config/Surfingkeys config/sxhkd"

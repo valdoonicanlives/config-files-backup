@@ -1,0 +1,26 @@
+#!/bin/bash
+# FILE : bbcopy.sh
+# Function: Creates a copy of the images in the directory.
+#           Puts the copies into a directory that you name when calling the program.
+# Copyright (C) 2006 Dave Crouse <dave NOSPAMat usalug.org>
+# ------------------------------------------------------------------------ #
+if [ -z "$1" ] ; then
+	echo " ";
+	echo "		######### COMMAND FAILED ########## ";
+	echo "		USAGE: $0 newdirectoryname";
+	echo "		EXAMPLE: $0 imagecopies";
+	echo "		This would create a new directory called imagecopies.";
+	echo "		The program would then make a copy of all jpgs in that directory.";
+	echo "		######### COMMAND FAILED ########## ";echo " ";
+else
+
+mkdir -p $1
+export IFS=$'\n';
+for i in $(find . -maxdepth 1 -type f -iname "*.jpg");
+do
+cp ${i:2} $1/${i:2};
+echo "Copying ${i:2} into \"$1\" ";
+done
+echo "Done";
+fi
+exit 0

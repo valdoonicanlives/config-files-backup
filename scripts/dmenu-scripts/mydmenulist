@@ -1,0 +1,21 @@
+#!/bin/bash
+# adapted from yet another dmenu script got from the web(yan-dmenu)
+# I put a , infront of web links just so that when you type , then only the weblinks will be shown to narrow down
+# did the same for opening files,type / first
+
+
+
+mylist="
+/quick-clips leafpad '~/quick-clippings'
+/fasting geany '/media/WDa/Dropbox/text-files/fasting.txt'
+/funnysymbols leafpad '/media/WDa/Dropbox/text-files/funnysymbols.txt'
+screenshot ~/scripts/shot.sh
+,youtube firefox www.youtube.com
+,movies firefox www.imdb.com
+gjots2
+"
+#below line only show the first column tags (the -fl command)
+result=$(echo "$mylist" | cut -d' ' -f1 | dmenu -fn "-misc-fixed-*-*-*-*-20-200-*-*-*-*-*-*" -nb "#000000" -nf "#e0e0e0" -sb "#000000" -sf "#4abcd4")
+#below line only act on the 2nd column
+cmd=$(echo "$result" | cut -d' ' -f2-)
+[ -n "$cmd" ] && eval setsid setsid "$cmd"

@@ -1,0 +1,23 @@
+#!/bin/bash
+# FILE : bbwrcom.sh
+# Function: Writes (replaces all existing) comments to all images in the directory.
+# Copyright (C) 2006 Dave Crouse <dave NOSPAMat usalug.org>
+# ------------------------------------------------------------------------ #
+if [[ -z $( type -p wrjpgcom ) ]]; then echo -e "The program wrjpgcom -- NOT INSTALLED !";exit ;fi
+
+if [ -z "$1" ] ; then
+	echo " ";
+	echo "		######### COMMAND FAILED ########## ";
+	echo "		USAGE: $0 \"comment inside of quotation marks ! \" ";
+	echo "		EXAMPLE: $0 \"My comment goes here\" ";
+	echo "		Note, you MUST include the quotation marks or the command will fail.";
+	echo "		######### COMMAND FAILED ########## ";echo " ";
+else
+
+export IFS=$'\n';
+for i in $(find . -maxdepth 1 -type f -iname "*.jpg");
+do
+echo "Replacing comments on ${i:2}"; wrjpgcom -replace -comment "$1" ${i:2} > _${i:2} ; mv _${i:2} ${i:2}
+done
+fi
+exit 0

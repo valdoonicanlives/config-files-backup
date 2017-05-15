@@ -1,0 +1,63 @@
+#! /bin/bash
+
+clappsmenu() {
+#top menu of clapps, first question
+echo "what do you want to run?
+1) leafpad     #simple test
+2) archey       #nicely shows what you're running
+3) screenfetch  #also nicely shows the same
+4) inxi -wx     #your timezone's weather
+5) inxi -F      #everything you ever wanted to know about your computer
+6) ncdu         #where the big stuff is clogging up your storage      
+7) htop         #what's running, n what's it doing, n how much it chewing
+8) other
+
+enter number preference of preference:"
+
+
+read CLAPPSCHOOSE
+case $CLAPPSCHOOSE in
+        1)
+                echo "Choice was $CLAPPSCHOOSE"
+                leafpad               
+                ;;
+        2)
+                echo "Choice was $CLAPPSCHOOSE, now making it so."
+                archey                
+                ;;
+        3)
+                echo "Choice was $CLAPPSCHOOSE so that is what you get"
+                screenfetch
+                ;;
+        4)
+                echo "Choice was $CLAPPSCHOOSE so that is what you get"
+                inxi -wx
+                ;;
+        5)
+                echo "Choice was $CLAPPSCHOOSE so that is what you get"
+                inxi -F
+                ;;
+        6)
+                echo "Choice was $CLAPPSCHOOSE so that is what you get"
+                ncdu
+                ;;
+        7)
+                echo "Choice was $CLAPPSCHOOSE so that is what you get"
+                htop
+                ;;
+        8)
+                echo "Choice was $CLAPPSCHOOSE so that is what you get"
+                echo "idkwtf goes here...  something, surely."
+                sleep 1
+                echo "come help write more, here:"
+                sleep 1
+                echo "http://vsido.org/index.php?topic=667.0"
+                ;;
+        *)
+                echo "Valid Choices are 1,2,3,4,5,6,7,8"
+                exit 1
+                ;;
+esac
+}
+
+clappsmenu

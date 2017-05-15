@@ -1,0 +1,30 @@
+#!/bin/bash
+# Bash Menu Script Example
+
+PS3='Please enter your choice: '
+options=("Funny-Symbols" "vim-priv" "vim-priv-social" "youtubedl" "Quit")
+select opt in "${options[@]}"
+do
+    case $opt in
+        "Funny-Symbols")
+            leafpad /home/dka/text-files/funnysymbols.txt
+	    exit 	
+            ;;
+        "vim-priv")
+            vim /media/WDa/Dropbox/notes/vimp
+            exit
+            ;;
+        "vim-priv-social")
+            vim /media/WDa/Dropbox/notes/vim-sp
+            exit
+            ;;
+        "youtubedl")
+            youtube-dl
+            exit
+            ;;
+        "Quit")
+            break
+            ;;
+        *) echo invalid option;;
+    esac
+done

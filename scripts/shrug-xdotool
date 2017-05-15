@@ -1,0 +1,4 @@
+#!/bin/bash
+#Xdotool script to type the shrug emoji
+echo -en "¯\\_(\xe3\x83\x84)_/¯" | xsel
+xdotool key Shift+Insert

@@ -1,0 +1,18 @@
+#!/bin/zsh
+# Doesn't work DK
+cd '/home/dka/bin/ranger-fm/'
+fzffind() {
+  /home/dka/bin/myranger "$(locate "*" | fzf -e -i )"
+  
+  # some programs require a longer time to load
+  sleep 2
+  
+  # if cancle or fail then exit
+  # if [ $? -ne 0 ]
+  # then
+  #  	exit
+  # fi
+}
+
+
+xterm -fullscreen -e  --cmd=$fzffind 

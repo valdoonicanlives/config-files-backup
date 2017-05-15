@@ -1,0 +1,122 @@
+#!/bin/sh
+
+
+usage() {
+  echo -e "
+usage: $(basename $0) [-ls] [-dqru args]
+
+switches:
+-l      Loop forever
+-s      Shuffle shit
+-d      Specify the directory $(basename $0) will find your music
+-q      Filter fzf result by your query
+-r      Filter item by range (as in date range)
+-u      Specify the directory where your channels database (ex: channels.csv) file exists.
+
+\"-q\", \"-d\", \"-s\", and \"-r\" switches aren't available in url-stream (\"-u\") mode
+"
+}
+
+while getopts ":d:lq:r:s:u:" opt; do
+  case $opt in
+    d)
+      # Option d is to specify directory, I changed it from dir="$OPTARG"
+         dir="/home/dka/music/shared-music/"
+         ;;
+      l)
+      # Option 'l' is for looping infinitely
+         loop="true"
+         ;;
+      q)
+      # Option 'q' to query
+         query="$OPTARG"
+         ;;
+      r)
+      # Use option 'r' to specify range (integer as in number of days)
+         if ! [[ $OPTARG =~ ^[0-9]+$ ]] ; then
+           echo "-r requires an integer number"
+           exit 1
+         fi
+         range="$OPTARG"
+         ;;
+      s)
+      # Self explanatory
+         shuffle=true
+         ;;
+    u)
+      # To select a dir that contains multiple .csv (contains channels for streaming, was "$OPTARG")
+      url_dir="/home/dka/.scripts/"
+      ;;
+      :)
+         printf "Option -$OPTARG requires an argument.\n\n" >&2
+         usage
+         exit 1
+         ;;
+      :)
+  esac
+done
+
+if [[ $dir = "" ]]; then
+# below was dir=.
+  dir=/home/dka/music/shared-music/
+fi
+
+# If date range is provided.
+if [[ -n $range ]]; then
+  selection() {
+     find $dir -type d -mtime +1 -mtime -$range
+   }
+# If range isn't provided.
+else
+   selection() {
+     find $dir -type d
+   }
+fi
+
+# Querying.
+if [[ -n $query ]]; then
+  eval "$(echo "query_selection()"; declare -f selection | tail -n +2)"
+   selection() {
+     query_selection | grep -i "$query"
+   }
+fi
+
+# Shuffle Music in a dir.
+if [[ $shuffle = true ]]; then
+  eval "$(echo "shuffle_selection()"; declare -f selection | tail -n +2)"
+   selection() {
+     shuffle_selection | perl -MList::Util=shuffle -e "print shuffle(<STDIN>);" | head -n 1
+   }
+fi
+
+if [[ -n $url_dir ]]; then
+  selection() {
+    sel="$(find $url_dir -type f -name "*.csv" )"
+    for x in "$sel"; do
+      cat $x;
+    done
+  }
+fi
+
+play_selection() {
+  fzf_selection=$(selection | fzf -1)
+   if [[ -n $fzf_selection ]]; then
+    if [[ -n $url_dir ]]; then
+      rad_sel=$(echo "$fzf_selection" | grep -Eo '(http|ftp|https)://[[:alnum:][:punct:]]*[[:alnum:]]')
+      mpg123 -C --title --utf8 --buffer 2048 --smooth -@ "$rad_sel"
+    else
+        mpg123 -C --title "$fzf_selection"/*
+    fi
+   else
+      echo "Nothing found or selected!"
+   fi
+}
+
+if [[ $loop = true ]]; then
+  while :
+   do
+     play_selection
+   done
+else
+  play_selection
+fi

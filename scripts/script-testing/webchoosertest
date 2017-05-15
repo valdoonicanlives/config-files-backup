@@ -1,0 +1,28 @@
+#!/bin/sh
+#
+#  Use dmenu to open website from a given list.
+
+# Global variables:
+FILES=${1:-"$HOME/.config/bookmarks"}
+BROWSER=chromium
+
+if [ -f $XDG_CONFIG_HOME/dmenu/dmenurc ]; then
+  . $XDG_CONFIG_HOME/dmenu/dmenurc
+else
+  DMENU='dmenu -i -l 10'
+fi
+
+# Show list of options
+choice=$(awk '{print $2}' $FILES | $DMENU -p "Choose website:")
+
+if [[ $choice ]]; then
+    # use eval as get vim error if use awk's "system"
+    eval $(awk '/'$choice'/ && == 2 {printf("'$BROWSER' %s",$1); exit}
+                /'$choice'/ && {printf("%s %s",$2); exit}' $FILES)
+fi
+
+####################
+#could remove the "NF == 3" entry and the NF references.
+
+#awk '{print $NF}'
+

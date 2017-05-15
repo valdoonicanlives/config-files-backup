@@ -1,0 +1,15 @@
+#!/bin/bash
+# FILE : bbnormalize.sh
+# Function: Normalizes all images in the directory.
+# Copyright (C) 2006 Dave Crouse <dave NOSPAMat usalug.org>
+# ------------------------------------------------------------------------ #
+if [[ -z $( type -p convert ) ]]; then echo -e "ImageMagick -- NOT INSTALLED !";exit ;fi
+
+export IFS=$'\n';
+for i in $(find . -maxdepth 1 -type f -iname "*.jpg");
+do 
+convert -normalize ${i:2} _${i:2};
+mv _${i:2} ${i:2}
+echo "Normalized image ${i:2}" ;
+done
+exit 0

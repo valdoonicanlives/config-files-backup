@@ -1,0 +1,81 @@
+http://bashscripts.org/forum/viewforum.php?f=34
+
+BBIPS command line utility help
+WARNING - most bbips commands work DIRECTLEY on your images !!! 
+It is recommended that you work on jpg COPIES ONLY to prevent loss of originals.
+bbcopy | Create a directory and COPY all images into it. example:
+bbcopy ANYNAMEHERE 
+
+copies all the .jpg's into a new dir ANYNAMEHERE 
+
+then cd into the ANYNAMEHERE dir and run any of the commands you want on these images....as they are copies of the main ones
+You can ALSO script these together into a bashscript
+eg, see example script at the bottom.
+Note, I just usually create a hidden directory for the bbips scripts. (~/.bbips) and then create a set of alias's in my .bashrc file. I included them below in case someone would like to cut-n-paste vs type alot. 
+alias bbapcom='bash ~/.bbips/bbapcom'
+alias bbatxt='bash ~/.bbips/bbatxt'
+alias bbborder='bash ~/.bbips/bbborder'
+alias bbcolorize='bash ~/.bbips/bbcolorize'
+alias bbcopy='bash ~/.bbips/bbcopy'
+alias bbflip='bash ~/.bbips/bbflip'
+alias bbflop='bash ~/.bbips/bbflop'
+alias bbgallery='bash ~/.bbips/bbgallery'
+alias bbgallery2='bash ~/.bbips/bbgallery2'
+alias bbgamma='bash ~/.bbips/bbgamma'
+alias bbgrayscale='bash ~/.bbips/bbgrayscale'
+alias bbgzip='bash ~/.bbips/bbgzip'
+alias bbhelp='bash ~/.bbips/bbhelp'
+alias bbindex='bash ~/.bbips/bbindex'
+alias bbnormalize='bash ~/.bbips/bbnormalize'
+alias bbpaint='bash ~/.bbips/bbpaint'
+alias bbrecom='bash ~/.bbips/bbrecom'
+alias bbrename='bash ~/.bbips/bbrename'
+alias bbresize='bash ~/.bbips/bbresize'
+alias bbrotate='bash ~/.bbips/bbrotate'
+alias bbsepia='bash ~/.bbips/bbsepia'
+alias bbshot='bash ~/.bbips/bbshot'
+alias bbsolarize='bash ~/.bbips/bbsolarize'
+alias bbwrcom='bash ~/.bbips/bbwrcom'
+------------------ 
+bbresize | RESIZEs all images width x height 
+bbrotate | ROTATEs all images clockwise x number of degrees 
+bbflip | FLIPs images top to bottom vertically. 
+bbflop | FLOPs images side to side horizontally. 
+bbatxt | ADDS TEXT to images. 
+------------------ 
+bbborder | Creates a border on all images color x size 
+bbgrayscale | Converts images to Black and White 
+bbsepia | Converts all images to SEPIA toned x percentage 
+bbpaint | Simulates an oil painting on all images 
+bbnormalize | Normalizes all images 
+bbcolorize | Colorizes all images. Format rgb. 
+bbgamma | Gamma correct for all images 
+bbsolarize | Solorizes all images. 
+------------------ 
+bbhelp | This lists the bbips command alias's 
+bbindex | Creates a index.jpg of all .jpg (not .JPG) files. 
+bbgzip | Creates a GZIPped file containing all the images. 
+------------------ 
+bbapcom | APpend COMments to the images. 
+bbrecom | Displays (REads) COMments on all images. 
+bbwrcom | WRites COMments to all images, overwriting any existing comments.
+=========================================
+example script:
+
+#!/bin/bash
+# File: mybbscript
+
+#### First lets make copies of the images and put them into a new directory called COPYS
+bbcopy COPYS
+#### Next, lets now move into the COPYS directory
+cd COPYS
+#### Now we are going to resize all the images in the copies directory to 800x800 max size
+bbresize 800 800
+#### Now we are putting a 2 pixel black border on every image
+bbborder black 2
+#### Now we are converting all images to black and white
+bbgrayscale
+#### Now we are putting text on every image
+bbatxt "Produced with bbips command line utilites"
+#### Now we are done  :)
+exit 0

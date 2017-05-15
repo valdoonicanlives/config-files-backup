@@ -1,0 +1,65 @@
+#!/bin/sh
+# where i got this  http://www.linuxquestions.org/questions/blog/william-dthdealer-450341/xmessage-choice-window-in-xinitrc-2730/
+while [ 1 ]; do # Loop this script
+
+### Startup choice screen
+
+xsetroot -solid black
+
+xmessage -buttons Normal:101,Alsamixer:110,Uxterm:111,Wicd-GTK:112,Custom:102,Tremulous:120,Warsow:121,Exit:1 -center -bg orange \
+"
+   Note: With the exception of 'Normal' once any of these options
+     has finished executing you will return to this menu screen
+
+
+.:XXXXXX Normal XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX:.
+  Normal    - Fluxbox and ROX desktop - BREAKS FROM THIS SCRIPT
+  Alsamixer - Launcher the Alsamixer volume adjustment application
+  Uxterm    - Open up a unicode terminal to play with
+  Wicd-GTK  - Opens up frontend for network configuration
+
+  Custom    - Enter a custom command to execute
+
+
+.:XXXXXX Games XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX:.
+  Tremulous - Start Tremulous without anything in the background
+  Warsow    - Start Warsow as above on its own
+
+
+  Exit      - Close Xorg and go back to the command-line"
+
+
+case $? in
+    101)    # Normal
+    ~/script/shell/dayfortune    # Print and store today's fortune
+    ~/.fluxbox/startup        # Start my WindowManager
+    break ;;            # End our world as we know it
+
+    110)    # Alsamixer
+    uxterm -rv -geometry 200x50+70+60 -e alsamixer ;;
+
+    111)    # Terminal
+    uxterm -rv -geometry 200x50+70+60 ;;
+
+    112)    # WICD-gtk
+    wicd-gtk -n ;;
+
+    102)    # Custom
+    grun ;;
+
+    120)    # Tremulous
+    tremulous ;;
+
+    121)    # Warsow
+    warsow     ;;
+
+    1)    # Exit
+    exit 0  ;;
+
+
+
+esac
+
+done
+
+exit 0

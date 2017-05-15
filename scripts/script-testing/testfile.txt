@@ -1,0 +1,1 @@
+google:yahoo:microsoft:apple:oracle:hp:dell:toshiba:sun:redhat

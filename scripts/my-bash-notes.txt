@@ -1,0 +1,167 @@
+Bash scripting
+#!/bin/bash
+#you can put in a line to ignore by using the #  symol to put in mulitple line quotes you do
+: '
+this can be a multi line commnet
+or block of text etc
+'
+#so you see you use a : and '  then your text and end with a single '
+
+#hello="this is a beginner script"
+#echo $hello
+#-----------------------------------------
+for indx in "donny" "mary" "albert"
+do
+	echo $indx
+done
+#---------------
+#array example
+some strings=( "hel" "lo" "wor" "ld" )
+for string in ${some_strings[@]}
+do
+	echo string
+done
+------------------
+example_for_loop_write_string_array_to_s­creen
+#!/bin/bash
+for i in $( ls ); do echo item: $i
+done
+-----------------------
+sleep 5  in a bash script will wait 5 seconds
+sleep 5m  would wait 5 mins use 5h for hours
+--------
+echo "hello world" >> mynotes.txt
+this writes the info to mynotes.txt but appends it doesn't overwrite whats already there, just having one > would overwrite.
+the below script will prompt you for input then save what you type into a file, appenging it to the end of file.
+echo "type in your note"
+read ans
+echo "info saved to the file mynotes.txt"
+echo "$ans" >> mynotes.txt
+-------------------
+*** If statements
+The syntax for an if statement is
+
+if [something]
+        then
+        elif
+        then
+        elif
+        then
+        ....etc....
+        else
+fi
+(The else if statement or (elif) is not necessary, but it can be used if needed. )
+another way of putting it is
+if [ condition ]
+then
+        action
+fi
+------
+example
+if [ $fruit = apple ]
+        then echo "Good, I like Apples"
+        else echo "Oh no, I hate Oranges!"
+fi
+-----
+If statements are an easy concept to grasp as they are similar to the "if" used in spoken English.
+But say you wanted to have 4 or 5 checks, the answer may be to write 4 or 5 statements but that's not the most
+practical way. This is where elif comes in handy.
+
+if [ $fruit = apple ]
+        then echo "Good, I like Apples"
+elif [ $fruit = pear ]
+        then echo "Good, I like Pears"
+elif [ $fruit = banana ]
+        then echo "Good, I like Bananas"
+        else echo "Oh no, I hate Oranges!"
+fi
+
+This saves us from from repetitive scripting. There are better ways to check what the fruit is, but we won't go into that now.
+-----
+another real world example
+
+if [ -f "$myfile" ]
+then
+        echo "the file already exists pet"
+fi
+
+(it would be -d for a directory)
+---------------------------------------------
+if condition
+then : # Do nothing and branch ahead
+else   # Or else ...
+take-some-action
+fi
+----------------------------------------------
+Command separator [semicolon]. Permits putting two or more commands on the same line.
+if [ -x "$filename" ]; then
+#Note the space after the semicolon.
+--------------------------------------------
+Using select to make simple menus
+
+               #!/bin/bash
+               OPTIONS="Hhello Quit"
+               select opt in $OPTIONS; do
+                   if [ "$opt" = "Quit" ]; then
+                    echo done
+                    exit
+                   elif [ "$opt" = "Hhello" ]; then
+                    echo Hhello World
+                   else
+                    clear
+                    echo bad option
+                   fi
+               done
+              
+--------------------------------------------
+#!/bin/bash
+#open a file but have to give a pass
+
+read -p "Password please: " pass
+
+if [ $pass = priv123 ]
+   then leafpad '/home/dka/text-files/Birthdays.txt'
+   exit
+else
+   echo "Error: pass does not exist." >&2
+   exit 1
+
+fi
+done
+===========================
+if [ $condition1 ] && [ $condition2 ]
+# Same as: if [ $condition1 -a $condition2 ]
+# Returns true if both condition1 and condition2 hold true...
+if [[ $condition1 && $condition2 ]] # Also works.
+eg:
+a=24
+b=47
+if [ "$a" -eq 24 ] && [ "$b" -eq 47 ]
+then
+echo "Test #1 succeeds."
+else
+echo "Test #1 fails."
+fi
+#you can use -a instead of &&
+if [ "$a" -eq 24 -a "$b" -eq 47 ]
+then
+echo "Test #3 succeeds."
+else
+echo "Test #3 fails."
+fi
+---------------------
+#you can use -o instead of || 
+if [ $condition1 ] || [ $condition2 ]
+# Same as: if [ $condition1 -o $condition2 ]
+# Returns true if either condition1 or condition2 holds true...
+if [[ $condition1 || $condition2 ]]
+# Also works.
+if [ "$a" -eq 98 -o "$b" -eq 47 ]
+then
+echo "Test #4 succeeds."
+else
+echo "Test #4 fails."
+fi
+
+
+

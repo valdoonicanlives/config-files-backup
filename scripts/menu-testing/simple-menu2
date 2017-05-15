@@ -1,0 +1,12 @@
+#!/bin/bash
+echo "select a choice >>  1) <firefox-youtube> 2) <leafpad> 3) <vim-passes> 4) <vim-social> 5)Quit "
+
+read n
+case $n in
+    1) firefox www.youtube.com;;
+    2) leafpad;;
+    3) vim;;
+    4) vim;;
+    5) exit;;	
+    *) invalid option;;
+esac

@@ -1,0 +1,15 @@
+#!/bin/bash
+set -e
+
+# Get the current playlist
+format="%artist% - %title%"
+playlist="$(mpc playlist -f "$format")"
+
+# Pipe the playlist to dmenu, catch name
+name="$(echo "$playlist" | dmenu "$@")"
+
+# Get the playlist position of the name with sed
+songnumber="$(echo "$playlist" | sed -n "/${name}/=")"
+
+# Play the song
+mpc play $songnumber

@@ -1,0 +1,102 @@
+#!/usr/bin/env bash
+ 
+# Preferred terminal
+terminal='urxvt'
+ 
+# Preferred editor
+editor='nvim'
+ 
+# Drawing the line ( hexcode will vary if not using lime )
+auto_line ()
+{
+   # You may change the limit ( i.e the number 11 ) to suit your needs
+   for i in {1..11}
+   do
+      printf "\u00c4"
+   done
+}
+ 
+# Fonts
+font1='-artwiz-lime-medium-r-normal--10-110-75-75-m-50-iso8859-1'
+font2='-wuncon-siji-medium-r-normal--10-100-75-75-c-80-iso10646-1'
+ 
+# Dmenu Preferences
+ 
+# Width
+W=64
+# Horizontal Position
+X=612
+# Vertical Position
+Y=304
+ 
+ 
+menu_list="  Run\n  File\n Edit\n View\n Term\n  Web\n  Rngr\n Wifi\n Music\n`auto_line`\n Info\n  Find\n Sett\n\n    "
+ 
+# Get colr: http://ow.ly/MYBjg or manually enter the color codes
+Dmenu="/usr/bin/dmenu -i -fn '$font1','$font2' -x $X -y $Y -w $W -l 20 -nb '#`colr bg`' -sb '#`colr cynf`' -nf '#`colr fg`' -sf '#`colr bg`'"
+ 
+ 
+# Putting it all together
+cmd=$(echo -e "$menu_list" | eval $Dmenu)
+ 
+case $cmd in
+ 
+   *Run)
+      $HOME/bin/dmenu.scripts/run-recent ;;
+ 
+   *File)
+      thunar > /dev/null 2>&1 ;;
+ 
+   *Edit)
+      $terminal -e $editor
+ 
+   *View)
+      sxiv -qbfr $HOME/images/ ;;
+ 
+   *Term)
+      $terminal -g 120x40 -e bash -c "tmux -q has-session && exec tmux attach-session -dt main || exec tmux new-session -nmain -smain" ;;
+ 
+   *Web)
+      firefox --private > /dev/null 2>&1 ;;
+ 
+   *Music)
+      $HOME/bin/mpd-launch ;;
+ 
+   *Rngr)
+      $terminal -e ranger ;;
+ 
+   *Wifi)
+      gksudo $HOME/bin/dmenu.scripts/.connman_dmenu > /dev/null 2>&1 ;;
+ 
+   *Info | ";"i | i";")
+      $HOME/bin/dmenu.scripts/stat ;;
+ 
+   *Find)
+      $HOME/bin/dmenu.scripts/finder ;;
+ 
+   *Sett | ";"s | s";")
+      $HOME/bin/dmenu.scripts/settings ;;
+ 
+   quit | * | ";"q | q |q";")
+      $HOME/bin/dmenu.scripts/exit-menu ;;
+ 
+   h | ";"h | h";")
+      $terminal -g 68x6 -e htop ;;
+ 
+   ";"a | a";")
+      $HOME/bin/dmenu.scripts/.dscript ;;
+ 
+   ";"t | t";")
+      $HOME/bin/dmenu.scripts/todo ;;
+ 
+   ";"e | e";")
+      $terminal -e $editor $HOME/bin/dmenu.scripts/.menu ;;
+ 
+   "/")
+      $terminal -e $editor $HOME/bin/dmenu.scripts/ ;;
+ 
+   k | ";"k | k";")
+      $HOME/bin/dmenu.scripts/pkill-menu ;;
+esac
+ 
+exit 0

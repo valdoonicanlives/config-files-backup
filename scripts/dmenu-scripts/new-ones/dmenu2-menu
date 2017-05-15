@@ -1,0 +1,62 @@
+#!/bin/sh
+
+# Define your battery device. Look up in '/sys/class/power_supply/' for a directory named 'BAT0' ( it also can be 'BAT1 or something else )
+#device='BAT1'
+#battery="$(cat /sys/class/power_supply/$device/capacity)%"
+
+# Volume Status for alsa users
+#volume="$(amixer get Master | tail -1 | sed 's/.*\[\([0-9]*%\)\].*/\1/')"
+if [[ -f $HOME/.dmenurc ]]; then
+    . $HOME/.dmenurc
+    DMENU="dmenu $OPTIONS -p "
+else
+    DMENU="dmenu -i -p "
+fi
+
+
+# Define your preferred terminal
+terminal='urxvt -e'
+
+# How many spaces do you want before the battery status ?
+spaces=10
+
+# Automating the number of spaces
+function auto_space
+{
+for ((i = 0; i <= $spaces; i++)); do
+	printf ' '
+done
+}
+
+# Menu Order.
+menu_list="File\nEdit\nWeb\nTerm\nEmacs\nMusic\nWifi\nHtop\nRanger\nScrot\nScrot-s\"
+# menu_list="File\nEdit\nWeb\nTerm\nEmacs\nMusic\nWifi\nHtop\nRanger\nScrot\nScrot-s\n$(eval auto_space)Batt: $battery\n Vol: $volume"
+
+
+cmd=$(echo -e "$menu_list" | eval $Dmenu)
+
+case $cmd in
+	Edit)
+		$terminal vim ;;
+	Web)
+		chromium --incognito ;;
+	Ranger)
+		$terminal ranger ;;
+	Htop)
+		$terminal htop ;;
+	Term)
+		$terminal bash -c "tmux -q has-session && exec tmux attach-session -d || exec tmux new-session -nmain -s$USER@$HOSTNAME" ;;
+	File)
+		thunar ;;
+	Emacs)
+		emacs ;;
+	Music)
+		$terminal ncmpcpp ;;
+	Scrot)
+		scrot '%F--%I:%M:%S:%p--$wx$h--scrot.png' -e 'mv $f ~/.scrots/' && notify-send 'Scrot Saved !' ;;
+	Scrot-s)
+		scrot '%F--%I:%M:%S:%p--$wx$h--scrot.png' -s -e 'mv $f ~/.scrots/' && notify-send 'Scrot Saved !' ;;
+	Wifi)
+		gksudo ~/.scripts/dmenu-scripts/connman_dmenu ;;
+esac
+exit 

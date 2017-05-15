@@ -1,0 +1,33 @@
+#!/bin/bash
+## ~/bin/stcurl
+tput clear
+echo "Testing 10 servers this will take a while..."
+echo "Plus Fibertel BsAs with a 12Mb contract"
+echo "and at the end - a 500MB download!"
+echo
+date +"  Start time: %x @ %T - 0. 1901 Fibertel, BsAs: 0.03 km"
+speedtest-cli --server 1901 --simple
+date +"  Start time: %x @ %T - 1. 2002 Wittenberg-net GmbH Wittenberg, Germany: 11825.43 km"
+speedtest-cli --server 2002 --simple
+date +"  Start time: %x @ %T - 2. 3786 Old-Linux.com Nice, France: 10947.67 km"
+speedtest-cli --server 7084 --simple
+date +"  Start time: %x @ %T - 4. 8182 Cable One, Inc. Boise, ID, USA: 10536.75 km"
+speedtest-cli --server 8182 --simple
+date +"  Start time: %x @ %T - 5. 2789 Vodafone UK London, GB 11129.58 km"
+speedtest-cli --server 2789 --simple
+date +"  Start time: %x @ %T - 6. 3907 Bell Aliant Halifax, NS 8830.58 km"
+speedtest-cli --server 3907 --simple
+date +"  Start time: %x @ %T - 7. 3860 Start Comms Toronto, ON: 8952.68 km"
+speedtest-cli --server 3860 --simple
+date +"  Start time: %x @ %T - 8. 1700 Vodafone Athens, Greece: 11685.80 km"
+speedtest-cli --server 1700 --simple
+date +"  Start time: %x @ %T - 9. 1270 Telkom SA Cape Town, SA: 6877.47 km"
+speedtest-cli --server 1270 --simple
+date +"  Start time: %x @ %T - 10. 3633 China Telecom, Shanghai CN: 19639.67 km"
+speedtest-cli --server 3633 --simple
+echo
+date +"  Start time: %x @ %T - 500MB Dnld: from speedtest - using 'curl'"
+echo
+##alias stc500='curl -o /dev/null http://speedtest.wdc01.softlayer.com/downloads/test500.zip'
+curl -o /dev/null http://speedtest.wdc01.softlayer.com/downloads/test500.zip
+exit 0

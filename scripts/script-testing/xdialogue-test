@@ -1,0 +1,88 @@
+#!/bin/sh
+touch /dev/shm/nc10;
+tempfile=/dev/shm/nc10
+title=$0
+args=""
+param=""
+command=""
+
+cmd () {
+    if [ -z $args ]; then
+        Xdialog --title "$title" --stdout --menubox "What would you like to run?" 0 0 5 "geany" "" "leafpad" "" "Bluetooth" "" "3G" "" 1> $tempfile;
+        command=`cat $tempfile`
+    else
+        command=$args
+    fi
+
+    case $command in
+        GEANY|geany)
+        Xdialog --title "$title" --msgbox "ran GEANY." 0 0 &>/dev/null &
+        geany;
+        ;;
+    
+    esac
+}
+if
+command=$1
+        if [ $# -eq 2 ]; then
+        args=$2
+fi
+esac
+    #case $command in
+    #    GEANY|geany)
+    #    Xdialog --title "$title" --msgbox "ran GEANY." 0 0 &>/dev/null &
+    #    geany;
+    #    ;;
+    #    WLAN|wlan)
+    #    Xdialog --title "$title" --msgbox "Activated WLAN." 0 0 &>/dev/null &
+    #    modprobe ath5k;
+    #        /etc/rc.d/network stop &>/dev/null &
+    #    /etc/rc.d/dbus start &>/dev/null &
+    #    /etc/rc.d/wicd start &>/dev/null &
+    #    ;;
+    #    Bluetooth|bt)
+    #    Xdialog --title "$title" --msgbox "Activated Bluetooth." 0 0 &>/dev/null &
+    #    modprobe btusb;
+    #    modprobe bluetooth;
+    #    ;;
+    #    3G|3g)
+    #    #Xdialog --title "$title" --msgbox "Activated 3G." 0 0 &>/dev/null &
+    #    Xdialog --no-cancel --logbox $tempfile 0 0 &>/dev/null &
+    #    modprobe ppp-generic;
+    #    echo 'nameserver 1.2.3.4' > /etc/resolv.conf;
+    #    echo 'nameserver 4.3.2.1' >> /etc/resolv.conf;
+    #    wvdial &>$tempfile;
+    #    ;;
+    #    *)
+    #    if [ -z $command ]; then
+    #    Xdialog --title "$title" --msgbox "Action cancelled!" 0 0 &>/dev/null &
+    #    else
+    #    Xdialog --title "$title" --msgbox "Invalid action '$command'!" 0 0 &>/dev/null &
+    #    fi
+    #    ;;
+    #    esac
+
+
+
+
+
+
+#if [ $# -eq 0 ]; then
+#    Xdialog --title "$title" --stdout --menubox "What action would you like to perform?" 0 0 5 "Add" "" "Remove" "" "cmd" "" 1> $tempfile;
+#    param=`cat $tempfile`
+#else
+#        PROGRAM=$1
+#        if [ $# -eq 2 ]; then
+#        args=$2
+#        fi
+#fi
+
+#case $PROGRAM in
+#    cmd)
+#    ;;
+#    *)
+#    Xdialog --title "$title" --msgbox "invalid parameter '$1' or operation cancelled." 0 0;
+#    ;;
+#esac
+#----------
+

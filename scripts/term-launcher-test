@@ -1,0 +1,13 @@
+#!/usr/bin/env bash
+TERM=urxvt
+#TERMNAME=term-dock
+XSCREENWIDTH=$(xrandr | grep \* | sed -e 's/x.*//' -e 's/^ *//')
+TERMHEIGHT=20
+TERMWIDTH=$XSCREENWIDTH
+killall -SIGSTOP i3
+$TERM --geometry=$TERMWIDTHx$TERMHEIGHT --name="$TERMNAME" &
+sleep 1
+TERMXID=0x$(xwininfo -root -tree | grep "$TERMNAME" | sed -e 's/.*0x//' -e 's/ .*//')
+# xprop -id $TERMXID -f _NET_WM_STRUT_PARTIAL 32cccccccccccc -set _NET_WM_STRUT_PARTIAL "0, 0, 0, 10, 0, 0, 0, 0, 0, 0, 0, $TERMWIDTH"
+# xprop -id $TERMXID -f _NET_WM_WINDOW_TYPE 32a -set _NET_WM_WINDOW_TYPE _NET_WM_WINDOW_TYPE_DOCK
+killall -SIGCONT i3

@@ -1,0 +1,67 @@
+#
+#  ▓▓▓▓▓▓▓▓▓▓
+# ░▓ author ▓ xero <x@xero.nu>
+# ░▓ code   ▓ http://code.xero.nu/dotfiles
+# ░▓ mirror ▓ http://git.io/.files
+# ░▓▓▓▓▓▓▓▓▓▓
+# ░░░░░░░░░░
+
+#ICO_DIRTY="⚡"
+#ICO_DIRTY="↯"
+ICO_DIRTY="*"
+#ICO_AHEAD="↑"
+ICO_AHEAD="🠙"
+#ICO_AHEAD="▲"
+#ICO_BEHIND="↓"
+ICO_BEHIND="🠛"
+#ICO_BEHIND="▼"
+ICO_DIVERGED="⥮"
+COLOR_ROOT="%F{red}"
+COLOR_USER="%F{cyan}"
+COLOR_NORMAL="%F{white}"
+PROMPT_STYLE="classic"
+
+
+#█▓▒░ allow functions in the prompt
+setopt PROMPT_SUBST
+autoload -Uz colors && colors
+
+#█▓▒░ colors for permissions
+if [[ "$EUID" -ne "0" ]]
+then  # if user is not root
+	USER_LEVEL="${COLOR_USER}"
+else # root!
+	USER_LEVEL="${COLOR_ROOT}"
+fi
+
+
+case "$PROMPT_STYLE" in
+#█▓▒░ ascii
+ascii)
+PROMPT='%{$bg[cyan]%} %F{black}%~ $reset_color
+%f'
+;;
+#█▓▒░ arrows
+arrows)
+PROMPT='%{$bg[cyan]%}%F{black} %~ $reset_color
+%f'
+;;
+#█▓▒░ ninja
+ninja)
+PROMPT='%F{white}
+        ▟▙  ${USER_LEVEL}%~   %F{white} %F{white}
+▟▒${USER_LEVEL}░░░░░░░%F{white}▜▙▜████████████████████████████████▛
+▜▒${USER_LEVEL}░░░░░░░%F{white}▟▛▟▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▛
+        ▜▛
+            %f'
+;;
+#█▓▒░ dual line
+dual)
+PROMPT='${USER_LEVEL}┌[${COLOR_NORMAL}%~${USER_LEVEL}]
+${USER_LEVEL}└─ - %f'
+;;
+#█▓▒░ classic
+*)
+PROMPT='${USER_LEVEL}[${COLOR_NORMAL}%~${USER_LEVEL}]── >> %f'
+;;
+esac

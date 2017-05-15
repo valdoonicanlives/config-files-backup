@@ -1,0 +1,140 @@
+#!/bin/bash
+
+## Memos and notes based on Zenity; aka - `znotes`
+#
+# Licence: This file is restricted as much as openbox is. Go figure that.
+# Author: Srđan Vukić <tux.lector@gmail.com>
+# Date: 03.03.2017
+#
+# Program name
+declare -r bsn=$(basename $0)
+
+# Allow only one instance of znotes
+bsnrun=$(ps h -C $bsn | grep -v $$ | wc -l);
+[[ $bsnrun > 1 ]] && exit;
+
+## Basic config
+# Directory where znote files reside
+# $bsn is this very script name
+declare -r zn_work_loc=$HOME/.config/znotes/$bsn
+declare -r zn_lw=500; # Default width
+declare -r zn_lh=600; # Default height
+## End of basic config
+
+[[ -d $zn_work_loc ]] || mkdir -p $zn_work_loc
+# I moved line below to inside the below function so that a new note is displayed as soon as you create it
+#declare -a all_notes="$(ls -i ${zn_work_loc})"
+
+# Display list of memo/notes
+function zn_list
+{
+     local note;
+     declare -a all_notes="$(ls -i ${zn_work_loc})"
+     if [[ -z $all_notes ]]
+     then zenity --info \
+          --text="There are no memo/notes to view/edit.\
+          \nYou may want to try with <b>$bsn new</b> command." 2> /dev/null
+
+     else
+          local zty=$(zenity --list \
+          --radiolist --width=$zn_lw --height=$zn_lh \
+          --title="Choose the note/memo to view/edit" \
+          --column="Select" --column="Existing memo/note" $all_notes \
+          --cancel-label="EXIT" --ok-label="LOAD SELECTED" 2> /dev/null)
+
+          if [[ -z $zty ]]
+          then
+               if pgrep -x "$bsn" > /dev/null
+               then pkill -f "$bsn"; fi
+          else
+               zn_view_edit $zty 2> /dev/null
+          fi
+     fi
+
+}
+
+# Make new znote
+function _new
+{
+     local fnpath
+     zty=$(zenity --forms \
+     --show-header --width=400 \
+     --title="Create new note" \
+     --text="Provide a name for your note" \
+     --add-entry="Name:" 2> /dev/null)
+
+     case $? in
+          0)
+               if [[ -z $zty ]]
+               then
+                    notify-send \
+                    --icon=face-worried \
+                    --expire-time=500 'Name for new memo/note cannot be empty'
+               else
+                    zty=${zty// /_}; fnpath="$zn_work_loc/$zty"
+                    if [[ -f $fnpath ]]
+                    then
+                         notify-send \
+                         --icon=face-monkey \
+                         --expire-time=500 'This memo/note already exists. Nothing happened.'
+                    else
+                         touch $fnpath && zn_view_edit $zty
+                         # touch $fnpath ;changed to line above to make it show new note on creation
+                         notify-send --icon=face-cool 'New memo/note successfully added!'
+                    fi
+               fi
+          ;;
+          1)
+               notify-send \
+                    --icon=face-sad \
+                    --expire-time=500 "No memo/note has been added." ;;
+          -1)
+               notify-send \
+                    --icon=face-devilish \
+                    --expire-time=500 "Kung-fu error has occurred!" ;;
+     esac
+}
+
+# View/edit selected note
+function zn_view_edit
+{
+     local file=$zn_work_loc/$1
+     local t_file="$file.$(date +%s%N).tmp"
+     local act="--text-info \
+     --title=$1 --filename=$file \
+     --width=$zn_lw --height=$zn_lh \
+     --editable --ok-label=Save-Changes \
+     --cancel-label=BACK"
+
+     [[ ! -f $t_file ]] || rm -f $t_file
+     zenity $act > $t_file
+
+     if [[ $? -eq 0 ]]
+     then
+          cat $t_file > $file
+          notify-send \
+               --icon=face-smile-big \
+               --expire-time=1000 "Memo/note '$1' saved"
+          rm -f $t_file && sleep 0.1s
+          zn_list
+     elif [[ $? -eq 1 ]]
+          then
+          rm -f $t_file && sleep 0.1s
+          zn_list
+     else
+          sleep 0.1s && rm -f $t_file
+          fi
+
+}
+
+# Do `this` or `that`
+case $1 in
+     new)_new; ;;
+     list) zn_list; ;;
+     *)
+          zenity --info \
+          --text="Unknown parameter <b>'$1'</b>.\
+          \n\nYou may want to try with\
+          \n<b>$bsn new</b> or <b>$bsn list</b>\ncommands." 2> /dev/null
+     ;;
+esac

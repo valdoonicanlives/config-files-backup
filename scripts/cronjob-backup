@@ -1,0 +1,13 @@
+#!/bin/bash
+# Fill variable with current day, month and year (ddmmyyyy)
+DATESTAMP="`date '+%a-%b-%d-%Y'`"
+# tar everything in directory and attach date
+tar cjvpf  /home/doc/forum-backups/backup_mysql.${DATESTAMP}.tar /var/lib/mysql
+tar cjvpf  /home/doc/forum-backups/backup_www.${DATESTAMP}.tar /var/www/html
+# Compress the tarballs
+gzip /home/doc/forum-backups/backup_mysql.${DATESTAMP}.tar
+gzip /home/doc/forum-backups/backup_www.${DATESTAMP}.tar
+# Record last saved in a .txt file
+date >> /home/doc/forum-backups/last-saved.txt
+echo "Backup Completed." >> /home/doc/forum-backups/last-saved.txt
+

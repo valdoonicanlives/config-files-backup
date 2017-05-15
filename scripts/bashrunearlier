@@ -1,0 +1,133 @@
+#!/bin/sh
+#
+# usage: bashrun [geometry] (default: 40x1)
+#
+# NOTE: commands entered will have an '&' appended before being run,
+# so don't append it yourself, it will fail silently.
+#
+# rcfile: $HOME/.bashrunrc
+#
+# ---------------------------------------------------------------------
+
+GEOM=${1:-40x1}
+
+# create .bashrunrc unless present
+BASHRUNRC=$HOME/.bashrunrc
+if [ ! -f $BASHRUNRC ]; then
+(
+cat <<'EOF'
+# which X terminal to use:
+# (xterm|rxvt|urxvt|mrxvt|aterm|mlterm)
+XTERM=xterm
+
+# history file and options:
+HISTFILE=$HOME/.bashrun_history
+HISTCONTROL=ignoredups:erasedups
+
+# bind <TAB> to menu-complete. Makes <TAB> cycle through completions on
+# the current line instead of paging all possible completions
+bind '"\t": menu-complete'
+
+# bind <C-g> to send ^D
+# (<C-g> is the default quit-chain-key in emacs, ratpoison, etc)
+bind '"\C-g"':"\"\x04\""
+
+# set a simple prompt
+PS1=">"
+
+# ***DO NOT EDIT BEYOND THIS LINE***
+#
+# bind ENTER to add ' &' to command
+bind '"\x0d"':"\" &\n\""
+EOF
+) > $BASHRUNRC
+fi
+
+XTERM=urxvt
+. $BASHRUNRC
+
+error() {
+    if [ `which zenity` ]; then
+        zenity --title bashrun --error --text "$@"
+    elif [ `which kdialog` ]; then
+        kdialog --title bashrun --error "$@"
+    elif [ `which xmessage` ]; then
+        xmessage "$@"
+    fi
+    echo -en "\007"
+    echo $@
+}
+
+# run bash terminal
+if [ "$XTERM" == "xterm" ]; then
+    $XTERM -name 'bashrun' \
+    -title 'bashrun' \
+    -geometry $GEOM \
+    -e "/bin/bash --rcfile $BASHRUNRC -i -t"
+
+elif [[ "$XTERM" == "aterm" || "$XTERM" == "mlterm" ]]; then
+    $XTERM -name 'bashrun' \
+    -title 'bashrun' \
+    -geometry $GEOM +sb \
+    -e /bin/bash --rcfile $BASHRUNRC -i -t
+
+elif [[ "$XTERM" == "urxvt" || "$XTERM" == "rxvt" ]]; then
+    $XTERM -name 'bashrun' \
+    -title 'bashrun' \
+    -geometry $GEOM +sb\
+    -e sh -c "/bin/bash --rcfile $BASHRUNRC -i -t"
+
+elif [ "$XTERM" == "mrxvt" ]; then
+    $XTERM -name 'bashrun' \
+    -title 'bashrun' \
+    -geometry $GEOM +sb -ht \
+    -e sh -c "/bin/bash --rcfile $BASHRUNRC -i -t"
+else
+    error "$XTERM is not supported. Please check $BASHRUNRC"
+    exit 1
+fi
+
+# history cleanup...
+# remove trailing whitespace and '&' from the last history line
+tac $HISTFILE | sed "1s/\&//;s/ *$//" | tac > $HISTFILE
+
+# HISTCONTROL won't work on its own because bash applies the
+# 'ignoredups' and 'erasedups' rules to 'command &'.
+
+# apply 'ignoredups' if set
+if [[ "$HISTCONTROL" =~ "ignoredups" || "$HISTCONTROL" =~ "ignoreboth" ]]; then
+    uniq $HISTFILE $HISTFILE.tmp
+    mv $HISTFILE.tmp $HISTFILE
+fi
+
+# apply 'erasedups' if set
+if [[ "$HISTCONTROL" =~ "erasedups" ]]; then
+    tac $HISTFILE | gawk '!x[$0]++' - | tac > $HISTFILE
+fi
+# HANDLERS: handlers allow rewriting of non-executable commandlines
+# based on regular expression matches, using subpattern substitution
+# and unary file test operators for refinement. 
+# See bashrun(1) for details.
+
+HANDLERS=(
+    # plain url handlers, for lines beginning with http, https or www
+    '^https?'   "$BROWSER"
+    '^www'      "$BROWSER"
+
+    # web shortcuts (examples for subpattern substitution)
+    '^gg:(.+)'  "$BROWSER 'http://www.google.com/search?q=\$1'"
+    '^ggl:(.+)' "$BROWSER 'http://www.google.com/search?q=\$1&btnI=I%27m+Feeling+Lucky'"
+    '^fm:(.+)'  "$BROWSER 'http://freshmeat.net/search/?q=\$1&section=projects'"
+    '^sf:(.+)'  "$BROWSER 'https://sourceforge.net/projects/\$1/'"
+    '^sfw:(.+)' "$BROWSER 'http://\$1.sourceforge.net/'"
+    '^ftp:(.+)' "xterm -e 'ncftp \$1'"
+
+    # file associations:
+    '\.jpe?g$'  "f!x:gimp"
+    
+    # ??command: show manual page
+    '^\?\?(.+)'  "xterm -e 'man \$1'"
+    
+    # ?command: page 'command --help' in xterm
+    '^\?(.+)'  "xterm -e '\$1 --help | $PAGER'"
+    )  

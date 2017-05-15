@@ -1,0 +1,17 @@
+#!/bin/bash
+# FILE : bbgzip.sh
+# Function: Creates a gzipped tar file of all jpegs in the directory.
+# Copyright (C) 2006 Dave Crouse <dave NOSPAMat usalug.org>
+# ------------------------------------------------------------------------ #    
+bigpath=`pwd`
+backupname=`basename $bigpath`
+export IFS=$'\n';
+tar -cvf $backupname.jpegs.tar $(find . -maxdepth 1 -type f -iname "*.jpg");
+gzip $backupname.jpegs.tar
+exit 0
+
+
+
+
+
+

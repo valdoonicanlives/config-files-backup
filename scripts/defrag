@@ -1,0 +1,7 @@
+#!/bin/sh
+# name of script defrag
+set -e
+# script to defrag ext4 drives monthly
+
+e4defrag  / /home  >/dev/null  2>&1
+exit

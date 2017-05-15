@@ -1,0 +1,6 @@
+#!/bin/bash
+
+# ...stuff...
+leafpad test.text | notify-send "sucess!" "$(cat)"
+#...more stuff...
+exit

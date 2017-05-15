@@ -1,0 +1,888 @@
+#!/bin/bash 
+#
+# bashrun 0.16.1 -- X11 application launcher based on bash
+# Copyright (C) 2009 Henning Bekel <h.bekel@googlemail.com>
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 2 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program; if not, write to the Free Software
+# Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
+# 02110-1301, USA.  
+#
+# ---------------------------------------------------------------------
+# config   : $XDG_CONFIG_HOME/bashrun/rc
+# keyboard : $XDG_CONFIG_HOME/bashrun/keys
+# history  : $XDG_DATA_HOME/bashrun/history
+# cache    : $XDG_CACHE_HOME/bashrun/
+# ---------------------------------------------------------------------
+
+function show_version {
+    echo "bashrun $VERSION Copyright (C) 2008-2010 Henning Bekel <h.bekel@googlemail.com>"
+}
+
+function show_help {
+
+    show_version
+    echo "Usage: bashrun [option]"
+    echo
+    echo "       Options:"
+    echo "         -v, --version : show version information"
+    echo "         -h, --help    : show this message"
+    echo "         -d, --debug   : start bashrun in debug mode"
+    echo
+    echo "         Available if xdotool(1) is installed:"
+    echo "           --show    : show bashrun window and focus it"
+    echo "           --hide    : hide the bashrun window"
+    echo "           --toggle  : toggle window visibility"
+    echo "           --exit    : exit bashrun"
+    echo "           --restart : restart bashrun"
+    echo "           --su cmd  : run command as root,"
+    echo "                       prompts for password in bashrun"
+    echo "           --wid     : print window id"
+    echo "           --wait    : wait until window is unmapped"
+    echo "           --debug   : toggle debug mode"
+    echo 
+    echo "       Press F1 in bashrun to list the current keybindings."
+    echo
+    echo "For more information, see bashrun(1) or visit http://bashrun.sourceforge.net"
+    echo
+}
+
+function bashrun_show_message { 
+    if [ `which zenity` ]; then
+	zenity --title "Bashrun" --info --text "$*" > /dev/null 2>&1
+    elif [ `which kdialog` ]; then
+	kdialog --title "Bashrun" --msgbox "$*" > /dev/null 2>&1
+    elif [ `which xmessage` ]; then
+	xmessage $* > /dev/null 2>&1
+    else
+	echo -en "\007"
+	echo $@
+    fi
+}
+
+function bashrun_show_error { 
+    if [ `which zenity` ]; then
+	zenity --title "Bashrun" --error --text "$*" > /dev/null 2>&1
+    elif [ `which kdialog` ]; then
+	kdialog --title "Bashrun" --error "$*" > /dev/null 2>&1
+    elif [ `which xmessage` ]; then
+	xmessage $* > /dev/null 2>&1
+    else
+	echo -en "\007"
+	echo $@
+    fi
+}
+
+function show_terminal_not_supported {
+    
+    local unsupported=$1
+    local supported=(xterm rxvt urxvt urxvtc mrxvt aterm mlterm)
+    local term=""
+    local msg="Terminal '$1' is not supported.\n\nSupported terminals are:\n\n"
+
+    for term in ${supported[@]}; do
+	msg="$msg$term\n"
+    done;
+
+    bashrun_show_error "$msg"
+}
+
+function create_config {
+    
+    # create config dir
+    if [ ! -d $CONFIG_DIR ]; then
+	echo "creating directory $CONFIG_DIR"
+	install -d -m 700 $CONFIG_DIR
+    fi
+
+    # create data dir
+    if [ ! -d $DATA_DIR ]; then
+	echo "creating directory $DATA_DIR"
+	install -d -m 700 $DATA_DIR
+    fi
+
+    # create cache dir
+    if [ ! -d $CACHE_DIR ]; then
+	echo "creating directory $CACHE_DIR"
+	install -d -m 700 $CACHE_DIR
+    fi
+
+    # move existing history file (upgrade to version>=0.7)
+    if [ ! -f $DATA_DIR/history ]; then
+	
+	if [ -f $CONFIG_DIR/.history ]; then
+	    mv $CONFIG_DIR/.history $DATA_DIR/history
+	fi
+
+	if [ -f $CONFIG_DIR/history ]; then
+	    mv $CONFIG_DIR/history $DATA_DIR/history
+	fi      
+    fi
+
+    # create config 
+    if [ ! -f $CONFIG ]; then
+	echo "creating file $CONFIG"
+	(
+	    cat <<'EOF'
+################################################################################
+#
+# bashrun user configuration file
+#
+# NOTE: If xdotool(1) is being used, you will have to restart the
+#       current instance of bashrun using "bashrun --restart" for
+#       changes to take effect.
+#
+################################################################################
+
+# set terminal: (xterm|rxvt|urxvt|urxvtc|mrxvt|aterm|mlterm)
+XTERM=urxvt 
+
+# additional commandline options for the terminal
+# by default, Xterm's metaSendsEscape and allowWindowOps are enabled,
+# so that Meta keybindings and window resizing work out of the box.
+# You'll have to adjust this if you're using a terminal other than xterm.
+
+XTERM_OPTIONS="-xrm XTerm**metaSendsEscape:True -xrm XTerm**allowWindowOps:True"
+
+# If set to "yes", the terminal won't be hidden after every command
+KEEP_OPEN=no	
+
+# terminal size in default mode
+SMALL_COLUMNS=40
+SMALL_LINES=1
+
+# terminal size in "large" mode (xterm and urxvt only)
+LARGE_COLUMNS=40
+LARGE_LINES=8
+
+# foreground and background colors
+BGCOLOR=black
+FGCOLOR=grey
+
+# simple prompt
+PS1=">"
+
+# fancy prompt
+# PS1=">\033[s\033[1;\$((COLUMNS-4))f\$(date +%H:%M)\033[u"
+
+# history options (see bash(1)):
+HISTCONTROL=ignoredups:erasedups 
+
+# COMPLETION_TYPE: 'complete', 'menu-complete' or 'quiet-complete'.
+#
+# 'complete'       : as usual (see bash(1))
+# 'menu-complete'  : makes <TAB> cycle through completions on the
+#                    current line instead of paging all possible
+#                    completions (see bash(1)).
+# 'quiet-complete' : like 'complete' with the following readline settings:
+#                      - page-completions off
+#	               - print-completions-horizontally on
+#	               - completion-query-items -1
+#
+#                    This means although completions are shown you will not
+#                    get to see them in a one-line terminal. 
+#                     
+# COMPLETION_THRESHOLD: if LINES >= COMPLETION_THRESHOLD, switch to
+#                       ALTERNATIVE_COMPLETION_TYPE. Disabled for
+#                       values <= 1
+#                       
+# 
+# ALTERNATIVE_COMPLETION_TYPE: The completion type to switch to if
+#                              LINES >= COMPLETION_THRESHOLD.
+#
+# This default setup will use 'menu-complete' in small mode and
+# 'complete' in large mode
+
+COMPLETION_TYPE=menu-complete
+COMPLETION_THRESHOLD=$LARGE_LINES
+ALTERNATIVE_COMPLETION_TYPE=complete
+
+# whether to use extended bash completion
+USE_EXTENDED_BASH_COMPLETION=no
+
+# path to bash_completion.sh
+EXTENDED_BASH_COMPLETION_PATH=/etc/profile.d/bash_completion.sh 
+
+# command to run directly after making the window visible via xdotool
+#POST_MAP_COMMAND='transset-df -a 0.65'
+
+# Which dict client to use for dict-lookup. Add it to TERMINAL_RULES
+# if neccessary. (default=dict --pager $PAGER)
+# DICT_CLIENT=kdict
+
+# Rules for always launching certain programs in a terminal. Include a
+# space separated list of program names after the colons to
+# automatically run, hold or page those commands in the terminal.
+
+TERMINAL_RULES=(
+    "RUN:"
+    "PAGE:"
+    "HOLD:"
+)
+
+# DIRHANDLER is a command to run when a path to a directory is entered
+# and the directory exists. The path will be passed as the first
+# argument.
+#DIRHANDLER='kfmclient openProfile filemanagement'
+
+# BROWSER to use for google lookup (C-M-g)
+BROWSER=chromium
+
+# GOOGLE_FALLBACK (default: no) If set to "yes" bashrun will automatically
+# google the commandline if it isn't executable or handled by HANDLERS
+# or DIRHANDLER
+GOOGLE_FALLBACK=no
+
+# HANDLERS: handlers allow rewriting of non-executable commandlines
+# based on regular expression matches, using subpattern substitution
+# and unary file test operators for refinement. 
+# See bashrun(1) for details.
+
+HANDLERS=(
+    # plain url handlers, for lines beginning with http, https or www
+    '^https?'   "$BROWSER"
+    '^www'      "$BROWSER"
+
+    # web shortcuts (examples for subpattern substitution)
+    '^gg:(.+)'  "$BROWSER 'http://www.google.com/search?q=\$1'"
+    '^ggl:(.+)' "$BROWSER 'http://www.google.com/search?q=\$1&btnI=I%27m+Feeling+Lucky'"
+    '^fm:(.+)'  "$BROWSER 'http://freshmeat.net/search/?q=\$1&section=projects'"
+    '^sf:(.+)'  "$BROWSER 'https://sourceforge.net/projects/\$1/'"
+    '^sfw:(.+)' "$BROWSER 'http://\$1.sourceforge.net/'"
+    '^ftp:(.+)' "xterm -e 'ncftp \$1'"
+
+    # file associations:
+    '\.jpe?g$'  "f!x:gimp"
+    
+    # ??command: show manual page
+    '^\?\?(.+)'  "xterm -e 'man \$1'"
+    
+    # ?command: page 'command --help' in xterm
+    '^\?(.+)'  "xterm -e '\$1 --help | $PAGER'"
+    )  
+
+# BOOKMARS is an array of strings that will be added to the possible
+# command completions. Make sure there is a HANDLER defined for each
+# of them.
+
+BOOKMARKS=(
+    www.google.com
+    www.archlinux.org
+    www.slashdot.org
+    www.linux.com
+    )
+
+# LOGFILE: command output is appended to LOGFILE. If it doesn't exist,
+# bashrun will attempt to create it. If it is not writeable, output is
+# redirected to /dev/null instead. Logging is disabled for su-actions.
+
+LOGFILE=/dev/null
+
+# Additional bash setup
+#
+# Since this file will be used as the rcfile for the bash session
+# invoked by bashrun, you can do anything here that you would usually
+# do in your ~/.bashrc. For example, you might set environment
+# variables, define functions or aliases, bind additional function
+# keys, etc.
+#
+# Just make sure that you don't interfere with the tty/bash settings
+# and keybindings used by bashrun (see the manual page). If you need
+# to know exactely what is going on, take a look at
+# $PREFIX/share/bashrun/bashrc
+EOF
+	    ) > $CONFIG
+    fi
+
+    # create keyboard config 
+    if [ ! -f $KEYCONF ]; then
+	echo "creating file $KEYCONF"
+	(
+	    cat <<'EOF'
+################################################################################
+# 
+# bashrun keyboard configuration file
+# 
+# The current keymap can be set using 
+#    KEYMAP <keymap>
+#
+# Keybindings are defined using
+#    <action> <keyseq> <keyname>
+#
+# - supported keymaps: "emacs", "vi-insert" or "vi-command".
+# - keyseq: valid readline keyseq (see readline(1))
+# - keyname: optional description for keyseqs like \e[11~ etc.
+# 
+# The following keyseqs are reserved by bashrun for internal use:
+#     
+#    \C-x[0-9][...]
+#    \20[0-9]
+#
+################################################################################
+
+KEYMAP emacs
+
+quit  \C-q 
+abort \C-g 
+pass  \ew  
+run   \C-m 
+run   \C-j 
+
+term-run  \e\C-m 
+term-run  \e\C-j 
+term-hold \eh 
+term-page \e+ 
+
+su-run       \esu
+su-term-run  \es\C-m
+su-term-run  \es\C-j
+su-term-hold \esh  
+su-term-page \es+
+
+show-manual \e? 
+show-info   \e\C-? 
+show-help   \C-x?
+
+copy        \ex
+copy-paste  \e\C-x
+
+filter \ea
+filter-paste \e\C-a 
+
+browse        \e\C-b
+google-search \e\C-g
+dict-lookup   \e\C-d
+
+bashrun-bindings \eOP   F1
+bashrun-bindings \e[11~ F1
+
+bashrun-manual   \eOQ   F2
+bashrun-manual   \e[12~ F2 
+
+bashrun-handlers \eOR   F3
+bashrun-handlers \e[13~ F3
+
+bashrun-debug    \e[24~ F12
+
+toggle-size  \C-l
+resize-up    \e[1;5A C-up
+resize-down  \e[1;5B C-down
+resize-left  \e[1;5D C-left
+resize-right \e[1;5C C-right
+
+################################################################################
+
+KEYMAP vi-insert
+
+quit  \C-q
+abort \C-g
+run   \C-m
+run   \C-j
+
+bashrun-bindings \eOP   F1
+bashrun-bindings \e[11~ F1
+
+bashrun-manual   \eOQ   F2
+bashrun-manual   \e[12~ F2
+
+bashrun-handlers \eOR   F3
+bashrun-handlers \e[13~ F3
+
+bashrun-debug    \e[24~ F12
+
+toggle-size  \C-l
+resize-up    \e[1;5A C-up
+resize-down  \e[1;5B C-down
+resize-left  \e[1;5D C-left
+resize-right \e[1;5C C-right
+
+################################################################################
+
+KEYMAP vi-command
+
+quit  \C-q
+abort \C-g
+pass  \ew
+run   \C-m
+run   \C-j
+
+term-run  \e\C-m
+term-run  \e\C-j
+term-hold \eh 
+term-page \e+ 
+
+su-run       \esu
+su-term-run  \es\C-m
+su-term-run  \es\C-j
+su-term-hold \esh  
+su-term-page \es+
+
+show-manual \e? 
+show-info   \ei
+show-help   \eh
+
+copy        \ec
+copy-paste  \ev
+
+filter \ea
+filter-paste \e\C-a 	   
+
+browse        \eb
+google-search \eg
+dict-lookup   \ed
+
+bashrun-bindings \eOP   F1
+bashrun-bindings \e[11~ F1
+
+bashrun-manual   \eOQ   F2
+bashrun-manual   \e[12~ F2
+
+bashrun-handlers \eOR   F3
+bashrun-handlers \e[13~ F3
+
+bashrun-debug    \e[24~ F12
+
+toggle-size  \C-l
+resize-up    \e[1;5A C-up
+resize-down  \e[1;5B C-down
+resize-left  \e[1;5D C-left
+resize-right \e[1;5C C-right
+EOF
+	    ) > $KEYCONF
+    fi
+}
+
+function bashrun_get_window_id {
+    if [[ BASHRUN_XDOTOOL -eq 1 ]]; then
+	if [[ ! -n $BASHRUN_WID ]]; then
+	    export BASHRUN_WID=`xdotool search $BASHRUN_XDOCLASSNAME bashrun 2> /dev/null`
+	fi
+    fi
+}
+
+function bashrun_map_window {
+    
+    xdotool windowmap $BASHRUN_WID  > /dev/null 2>&1
+    xdotool windowfocus $BASHRUN_WID  > /dev/null 2>&1
+
+    if [ "$POST_MAP_COMMAND" != "" ]; then
+	$POST_MAP_COMMAND
+    fi
+}
+
+function bashrun_unmap_window {
+
+    if [[ BASHRUN_XDOTOOL -eq 1 ]]; then
+
+	if [[ BASHRUN_STARTED -eq 1 ]]; then
+	    
+	    if [[ "$KEEP_OPEN" == "no" && BASHRUN_DEBUG -eq 0 ]]; then
+		bashrun_get_window_id
+		xdotool windowunmap $BASHRUN_WID  > /dev/null 2>&1
+		[[ ! "$0" =~ bashrun ]] && clear
+
+	    elif [[ BASHRUN_DEBUG -eq 0 ]]; then
+		xdotool windowfocus 0  > /dev/null 2>&1
+		[[ ! "$0" =~ bashrun ]] && clear
+	    fi
+	else
+	    BASHRUN_STARTED=1
+	fi
+    fi
+}
+
+function toggle_window {
+
+    if [[ "$KEEP_OPEN" == "no" && BASHRUN_DEBUG -eq 0 ]]; then
+        # find out whether the window is mapped
+	MAPPED=`xdotool search --onlyvisible $BASHRUN_XDOCLASSNAME bashrun 2> /dev/null`
+	    
+	if [ "$MAPPED" == "" ]; then
+	    bashrun_map_window
+	else
+	    bashrun_unmap_window
+	fi
+    else
+	if [ "$BASHRUN_WID" == `xdotool getactivewindow 2> /dev/null` ]; then
+	    xdotool windowfocus 0  > /dev/null 2>&1
+	else
+	    xdotool windowfocus $BASHRUN_WID  > /dev/null 2>&1
+	fi
+    fi
+}
+
+export -f \
+    bashrun_show_message \
+    bashrun_show_error \
+    bashrun_get_window_id \
+    bashrun_map_window \
+    bashrun_unmap_window 
+
+function run_terminal() {
+ 
+    export BASHRUN_STARTED=0
+    bashopts="-i -t"
+
+    if [[ "$KEEP_OPEN" == "yes" || BASHRUN_DEBUG -eq 1 ]]; then
+	bashopts="-i"
+    fi
+
+    if [[ BASHRUN_XDOTOOL -eq 1 ]]; then
+	bashopts="-i"
+    fi
+
+    GEOMETRY="${SMALL_COLUMNS}x${SMALL_LINES}"
+
+    if [[ BASHRUN_DEBUG -eq 1 ]]; then
+	GEOMETRY="80x24"
+    fi
+
+    if [ "$XTERM" == "xterm" ]; 
+    then
+	$XTERM -name 'bashrun' -title 'bashrun' \
+	    -geometry $GEOMETRY +sb \
+	    -bg $BGCOLOR -fg $FGCOLOR \
+	    $XTERM_OPTIONS \
+	    -e "/bin/bash --rcfile $BASHRC $bashopts" &
+	
+    elif [ "$XTERM" == "aterm" ];
+    then
+	$XTERM -name 'bashrun' -title 'bashrun' \
+	    -geometry $GEOMETRY +sb \
+	    -background $BGCOLOR -foreground $FGCOLOR \
+	    $XTERM_OPTIONS \
+	    -e /bin/bash --rcfile $BASHRC $bashopts &
+
+    elif [ "$XTERM" == "mlterm" ];
+	then
+	$XTERM -name 'bashrun' -T 'bashrun' \
+	    -g $GEOMETRY --sb=false \
+	    -b $BGCOLOR -f $FGCOLOR \
+	    -k esc -K alt\
+	    $XTERM_OPTIONS \
+	    -e /bin/bash --rcfile $BASHRC $bashopts &
+    
+    elif [ "$XTERM" == "mrxvt" ]; 
+    then
+	$XTERM -name 'bashrun' \
+	    -title 'bashrun' -geometry $GEOMETRY +sb -ht \
+	    -background $BGCOLOR -foreground $FGCOLOR \
+	    $XTERM_OPTIONS \
+	    -e sh -c "/bin/bash --rcfile $BASHRC $bashopts" &
+
+    elif [[ "$XTERM" =~ urxvt ]];
+    then
+	$XTERM -name 'bashrun' -title 'bashrun' \
+	    -geometry $GEOMETRY +sb \
+	    -background $BGCOLOR -foreground $FGCOLOR \
+	    $XTERM_OPTIONS \
+	    -keysym.Control-Up "\033[1;5A" \
+	    -keysym.Control-Down "\033[1;5B" \
+	    -keysym.Control-Left "\033[1;5D" \
+	    -keysym.Control-Right "\033[1;5C" \
+	    -e sh -c "/bin/bash --rcfile $BASHRC $bashopts" &
+    else
+	show_terminal_not_supported "$XTERM"
+	exit 1
+    fi
+}
+
+function wait_until_mapped {
+    if [[ BASHRUN_XDOTOOL -eq 1 ]]; then
+	while sleep 0.1; do
+	    [ ! "`xdotool search --onlyvisible $BASHRUN_XDOCLASSNAME bashrun 2> /dev/null`" == '' ] && break
+	done
+    fi
+}
+
+function wait_until_unmapped {
+    if [[ BASHRUN_XDOTOOL -eq 1 ]]; then
+	while sleep 0.1; do
+	    [ "`xdotool search --onlyvisible $BASHRUN_XDOCLASSNAME bashrun 2> /dev/null`" == '' ] && break
+	done
+    fi
+}
+
+function clear_line {
+
+    bashrun_map_window
+    wait_until_mapped
+
+    xdotool key $BASHRUN_CLEARMODS "ctrl+x" > /dev/null 2>&1
+    xdotool type $BASHRUN_CLEARMODS "00" > /dev/null 2>&1
+    xdotool key $BASHRUN_CLEARMODS "ctrl+x" > /dev/null 2>&1
+    xdotool type $BASHRUN_CLEARMODS "02" > /dev/null 2>&1
+    xdotool key $BASHRUN_CLEARMODS "ctrl+x" > /dev/null 2>&1
+    xdotool type $BASHRUN_CLEARMODS "04" > /dev/null 2>&1
+}
+
+function yank_line {
+    
+    bashrun_map_window
+    wait_until_mapped
+
+    xdotool key $BASHRUN_CLEARMODS "ctrl+x" > /dev/null 2>&1
+    xdotool type $BASHRUN_CLEARMODS "03" > /dev/null 2>&1
+
+}
+
+function exit_terminal {
+    
+    clear_line
+    # bashrun-set-mode \"pass\";unset HISTFILE;exit;exit\C-x10
+    xdotool type $BASHRUN_CLEARMODS "bashrun-set-mode \"pass\";unset HISTFILE;exit;exit" > /dev/null 2>&1
+    xdotool key $BASHRUN_CLEARMODS "ctrl+x" > /dev/null 2>&1
+    xdotool type $BASHRUN_CLEARMODS "10" > /dev/null 2>&1
+}
+
+function restart_terminal {
+    exit_terminal
+    unset BASHRUN_WID
+    sleep 1
+    $0 >/dev/null 2>&1 &
+}
+
+function toggle_debug {
+    # enable debug mode for running instance
+    clear_line
+    xdotool type $BASHRUN_CLEARMODS "trap DEBUG;toggle_debug" > /dev/null 2>&1
+    xdotool key $BASHRUN_CLEARMODS "ctrl+x" > /dev/null 2>&1
+    xdotool type $BASHRUN_CLEARMODS "10" > /dev/null 2>&1
+    yank_line
+}
+
+function run_su_command {
+    
+    local command="$@"
+
+    # remove --su option
+    command=${command/--su/}
+
+    clear_line
+    xdotool type $BASHRUN_CLEARMODS "$command" > /dev/null 2>&1
+    xdotool key $BASHRUN_CLEARMODS "ctrl+x" > /dev/null 2>&1
+    xdotool type $BASHRUN_CLEARMODS "12" > /dev/null 2>&1
+}
+
+function remote {
+
+    [[ ! ${#ARGV[@]} -gt 1 ]] && exit 1
+
+    ARGV[${#ARGV[@]}]='#*end*#'
+
+    local command=""
+    local word=""
+    local args=""
+
+    clear_line
+
+    for (( i=1; i<${#ARGV[@]}; i++ )); do
+	
+	word=${ARGV[$i]}
+
+	if [[ "$word" == "type" || "$word" == "key" || "$word" == "#*end*#" ]]; then
+
+	    if [[ "$command" != "" ]]; then
+
+		next_command="$word"
+
+		bashrun_map_window
+		wait_until_mapped
+		xdotool $command $BASHRUN_CLEARMODS "$args" > /dev/null 2>&1
+
+		if [[ "$command" == "key" && ! "$next_command" == "#*end*#" ]]; then
+		    sleep 0.5
+		    bashrun_map_window
+		    wait_until_mapped
+		fi
+		command=""
+	    else
+		command="$word"
+	    fi
+	else
+	    if [[ "$args" == "" ]]; then
+		args="$word"
+	    else
+		args="$args $word"
+	    fi
+
+	    if [[ "$next_command" != "" ]]; then
+		command="$next_command"
+		next_command=""
+		args="$word"
+	    fi
+	fi
+    done
+    if [[ "$next_command" == "#*end*" ]]; then
+	exit 0
+    fi
+}
+
+# main ----------------------------------------------------------------
+
+MAJOR_VERSION=0
+MINOR_VERSION=16
+BUGFIX_VERSION=1
+VERSION="$MAJOR_VERSION.$MINOR_VERSION.$BUGFIX_VERSION"
+PREFIX=$(which bashrun 2>/dev/null | sed "s:/bin/bashrun::")
+export BASHRUN_DEBUG=0
+
+OLD_IFS=$IFS
+IFS=$'\n'
+ARGV=($@)
+IFS=$OLD_IFS
+
+case $1 in
+    -v|--version)
+	show_version
+	exit 0
+	;;
+    -h|--help)
+	show_help
+	exit 0
+	;;
+    --major-version)
+	echo $MAJOR_VERSION
+	exit 0
+	;;
+    --minor-version)
+	echo $MINOR_VERSION
+	exit 0
+	;;    
+    --bugfix-version)
+	echo $BUGFIX_VERSION
+	exit 0
+	;;    
+    -d|--debug)
+	export BASHRUN_DEBUG=1
+	;;
+esac
+
+CONFIG_DIR=${XDG_CONFIG_HOME:-$HOME/.config}/bashrun
+DATA_DIR=${XDG_DATA_HOME:-$HOME/.local/share}/bashrun
+CACHE_DIR=${XDG_CACHE_HOME:-$HOME/.cache}/bashrun
+
+CONFIG=$CONFIG_DIR/rc
+KEYCONF=$CONFIG_DIR/keys
+
+BASHRC=$PREFIX/share/bashrun/bashrc
+
+# create configfile unless present
+create_config
+
+# source config
+. $CONFIG
+
+# check for xdotool... check for clearmodifiers feature, work around
+# interface changes (--name became --classname)...
+BASHRUN_XDOTOOL=0
+BASHRUN_CLEARMODS=""
+BASHRUN_XDOCLASSNAME="--name"
+if which xdotool &> /dev/null; then
+    BASHRUN_XDOTOOL=1
+    
+    # check if xdotool key supports --clearmodifiers
+    if (xdotool key 2>&1 | grep -- \-\-clearmodifiers &>/dev/null); then 
+	BASHRUN_CLEARMODS="--clearmodifiers"
+    fi
+
+    # check if xdotool search supports --classname
+    if (xdotool search 2>&1 | grep -- \-\-classname &>/dev/null); then 
+	BASHRUN_XDOCLASSNAME="--classname"
+    fi
+
+fi
+export BASHRUN_XDOTOOL BASHRUN_CLEARMODS BASHRUN_XDOCLASSNAME
+
+# try to get the window id
+bashrun_get_window_id
+
+# if xdotool is present and bashrun is already running
+if [[ BASHRUN_XDOTOOL -eq 1 && ! "$BASHRUN_WID" == '' ]]; then
+    BASHRUN_STARTED=1
+
+    # xdotool options
+    case $1 in
+	show|--show|"")
+	    bashrun_map_window
+	    ;;
+	hide|--hide)
+	    bashrun_unmap_window
+	    ;;
+	toggle|--toggle)
+	    toggle_window
+	    ;;
+	quit|--quit|exit|--exit)
+	    exit_terminal
+	    ;;
+	restart|--restart)
+	    restart_terminal
+	    ;;
+	--su)
+	    run_su_command "$@"
+	    ;;
+	--remote)
+	    remote
+	    ;;
+	--wid)
+	    echo $BASHRUN_WID
+	    ;;
+	--wait)
+	    wait_until_unmapped
+	    exit 0
+	    ;;
+	-d|--debug)
+	    toggle_debug
+	    exit 0
+	    ;;
+	*)
+	    show_help
+	    ;;
+    esac
+    exit 0
+else
+    case $1 in
+	# bashrun is not running, so these options shouldn't start it
+	hide|--hide|quit|--quit|exit|--exit|wid|--wid|wait|--wait)
+	    exit 0
+	    ;;
+	# these start bashrun if it's not running
+	show|--show|""|toggle|--toggle|restart|--restart|debug|-d|--debug|--su|--remote)
+	    :
+	    ;;
+	*)
+	    show_help
+    esac
+ 
+    # start bashrun
+    run_terminal
+    
+    if [[ BASHRUN_XDOTOOL -eq 1 ]]; then
+	
+	wait_until_mapped
+
+	# make sure it gets focus
+	bashrun_get_window_id
+	bashrun_map_window
+
+        # if option is --su then run the su command
+	if [[ "$1" == "--su" ]]; then
+	    run_su_command "$@"	    
+	fi	
+
+        # if option is --remote then run remote command
+	if [[ "$1" == "--remote" ]]; then
+	    remote 
+	fi	
+    fi
+fi

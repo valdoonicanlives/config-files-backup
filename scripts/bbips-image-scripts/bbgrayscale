@@ -1,0 +1,15 @@
+#!/bin/bash
+# FILE : bbgrayscale.sh
+# Function: Converts all images in the directory to black and white
+# Copyright (C) 2006 Dave Crouse <dave NOSPAMat usalug.org>
+# ------------------------------------------------------------------------ #
+if [[ -z $( type -p convert ) ]]; then echo -e "ImageMagick -- NOT INSTALLED !";exit ;fi
+
+export IFS=$'\n';
+for i in $(find . -maxdepth 1 -type f -iname "*.jpg");
+do
+echo "Converting ${i:2} to Black and White"; convert -colorspace gray ${i:2} new_${i:2}; mv new_${i:2} ${i:2}
+done
+exit 0
+
+

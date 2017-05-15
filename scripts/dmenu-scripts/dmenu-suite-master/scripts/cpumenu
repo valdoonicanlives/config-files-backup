@@ -1,0 +1,16 @@
+#!/bin/bash
+
+MENU_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
+source $MENU_DIR/lib/menu_helpers.sh
+
+current=$(cat /sys/devices/system/cpu/cpu0/cpufreq/scaling_governor)
+# read -r available < /sys/devices/system/cpu/cpu0/cpufreq/scaling_available_governors
+available=$(cat /sys/devices/system/cpu/cpu0/cpufreq/scaling_available_governors | sed 's/ /\n/g')
+# gov=$(printf "$available" | $MenuCmd --prompt "[$current] Governors: ")
+
+gov=$(menu "[$current]: " "$available")
+
+[[ -z $gov ]] && exit
+
+# No longer use sudo -A. Use visudo to allow user to run cpupower.
+sudo cpupower frequency-set -g $gov

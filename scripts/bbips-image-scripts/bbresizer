@@ -1,0 +1,15 @@
+#!/bin/bash
+# File: bbresizer
+
+#### First lets make copies of the images and put them into a new directory called COPYS
+bbcopy COPYS
+#### Next, lets now move into the COPYS directory
+cd COPYS
+#### Now we are going to resize all the images in the copies directory to 800x800 max size
+bbresize 800 800
+#### Now we are putting a 2 pixel black border on every image
+bbborder black 2
+#### Now we are putting text on every image
+bbatxt "Christiaan after fall Dec 2016"
+#### Now we are done  :)
+exit 0

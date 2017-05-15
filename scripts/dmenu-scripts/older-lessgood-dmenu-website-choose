@@ -1,0 +1,21 @@
+#!/bin/sh
+#
+# d-edit: Use dmenu to open websites from a given list.
+# working DK i adapted it as the original was to open text files in an editor
+
+# Global variables:
+FILES=${1:-"/home/dka/webtest"}
+
+#below is abt the appearance of dmenu what settings to use
+if [ -f $XDG_CONFIG_HOME/dmenu/dmenurc ]; then
+  . $XDG_CONFIG_HOME/dmenu/dmenurc
+else
+  DMENU='dmenu -i -l 8'
+fi
+####################
+# Show list of options
+choice=$(awk '{print $1}' $FILES | $DMENU -p "website to open:")
+
+if [ $choice ]; then
+    firefox $choice	
+fi

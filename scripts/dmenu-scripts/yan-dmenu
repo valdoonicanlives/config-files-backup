@@ -1,0 +1,17 @@
+#!/bin/bash
+# yet another - Dmenu script got from the web but i made it work better DK
+DMENU='dmenu -l 12 -x 200 -y 30 -w 600 -nb '#4E4E4E' -nf '#eeeeee' -sb '#5E656B' -fn Inconsolata-12'
+
+#only the most used are shown but eg typing chromium will open chromium typing blender will open blender
+mostused="
+fasting geany "/home/dka/text-files/fasting.txt"
+screenshot ~/scripts/shot.sh
+gjots2
+leafpad
+"
+#below line only show the first column tags (the -fl command)
+result=$(echo "$mostused" | cut -d' ' -f1 | $DMENU)
+#below line only act on the 2nd column
+cmd=$(echo "$result" | cut -d' ' -f2)
+[ -n "$cmd" ] && eval setsid setsid "$cmd"
+

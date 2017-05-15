@@ -1,0 +1,458 @@
+#!/bin/bash
+#Script by dejan555
+# http://murga-linux.com/puppy/viewtopic.php?t=95878
+# Bookmarks/Contacts/Notes gtkdialog script 
+# It uses sqlite3 so all data is stored inside one database (or you can create/load more separate ones) 
+# NEEDS gtkdialog installed
+
+## DEFINE PATHS AND VARIABLES ##
+export THISSCRIPT=$(realpath "$0")
+DBDIR="$HOME/.mylinks"
+[ ! -d "$DBDIR" ] && mkdir -p "$DBDIR"
+cd "$DBDIR"
+case $@ in
+	*--db=*)
+		DB=$(echo "$@" | sed 's#.*--db=##' | awk '{print $1}')
+	;;
+	*--load*)
+		DBITEMS=""
+		for i in *.sql;do
+			DBITEMS="$DBITEMS<item>$i</item>"
+		done
+		export CHOOSEDB_GUI='<window><vbox>
+		<comboboxentry><variable>DB</variable>
+		'"$DBITEMS"'
+		</comboboxentry>
+		<hbox><button ok></button><button cancel></button></hbox>
+		</vbox></window>'
+		do_statements CHOOSEDB_GUI		
+	;;
+esac
+[ "$DB" = "" ] && DB="mylinks.sql"
+export DB="$DB"
+export tmp="/tmp/mylinks.$USER"
+[ ! -d "$tmp" ] && mkdir -p "$tmp"
+
+## DEFINE FUNCTIONS ##
+
+## FOR EVALUATING GTKDIALOG VARIABLES ##
+do_statements() {
+			I=$IFS; IFS=""
+		for STATEMENTS in  $(gtkdialog --program=$1 --center); do
+   		eval $STATEMENTS
+		done
+		IFS=$I 
+		[ "$EXIT" != "OK" ] && exit
+}
+export -f do_statements 
+
+## EXPORTING DATA INTO TXT FOR INCLUDING IN GTKDIALOG ##
+db2txt() {
+		[ "$1" != "" ] && sqlite3 $DB "select * from links where Category=\"$1\";" > $tmp/mylinks.txt
+		[ "$1" = "" ] && sqlite3 $DB "select * from links;" > $tmp/mylinks.txt
+		sed -i "s/''/'/g" $tmp/mylinks.txt
+		sqlite3 $DB "select * from contacts order by Name asc;" > $tmp/mycontacts.txt
+		sqlite3 $DB "select Id, name from notes;" > $tmp/mynotes.txt
+}
+export -f db2txt
+
+
+## POPULATE DATABASE TABLES IF NOT EXIST ALREADY ##
+if [ ! -f "$DB" ]; then
+sqlite3 $DB "create table if not exists links(Id INTEGER PRIMARY KEY AUTOINCREMENT,Link varchar,Title varchar(50),Category varchar(30));"
+sqlite3 $DB "create table if not exists categories(name varchar(30) PRIMARY KEY);"
+sqlite3 $DB "create table if not exists contacts(Id INTEGER PRIMARY KEY AUTOINCREMENT,Name varchar(20),Surname varchar(30),Phone varchar(20));"
+sqlite3 $DB "create table if not exists notes(Id INTEGER PRIMARY KEY AUTOINCREMENT,name varchar(30),note varchar);"
+sqlite3 $DB "create table if not exists settings(setting varchar,value varchar);"
+sqlite3 $DB "insert into settings values(\"password\",\"0\");"
+fi
+
+## STARTING WITH COMMANDS HERE ##
+
+case $1 in
+	
+	## ADD LINK ##
+	
+	add)
+		
+		## CATEGORIES FOR COMBOBOX CHOICE ##
+		CATITEMS=$(sqlite3 $DB "select * from categories;")
+		CATS=""
+		for i in $CATITEMS;do
+			CATS="$CATS <item>$i</item>"
+		done
+		
+		## EXPORT GUI ##
+		export LNKADD_GUI='<window><vbox>
+		<text><label>""</label></text>
+		<text><label>Link: </label></text>
+		<entry><variable>LNK</variable></entry>
+		<text><label>Title: </label></text>
+		<entry><variable>TTL</variable></entry>
+		<text><label>Category: </label></text>
+		<comboboxentry><variable>CAT</variable>
+		'"$CATS"'
+		</comboboxentry>
+		<hbox><button ok></button><button cancel></button></hbox>
+		</vbox></window>'
+		do_statements LNKADD_GUI		
+		
+		## CHECK FOR EMPTY VARS ##
+		[ "$LNK" = "" ] && exit
+		[ "$TTL" = "" ] && exit
+		[ "$CAT" = "" ] && CAT="Miscellaneous"
+		
+		## Escape single quotes in title ##
+		TTL=$(echo "$TTL" | sed "s/'/''/g")
+		## INSERT DATA ##
+		sqlite3 $DB "insert into links(Link, Title, Category) values(\"$LNK\",\"$TTL\",\"$CAT\");"
+		HASCAT=$(sqlite3 $DB "select * from categories where name=\"$CAT\";")
+		[ "$HASCAT" = "" ] && sqlite3 $DB "insert into categories values(\"$CAT\");"
+		
+		## REFRESH TXT FILE SO GUI CAN REFRESH IMMIDIETLY ##
+		db2txt
+	;;
+	
+	newcontact)
+		export LNKC_GUI='<window><vbox>
+		<text><label>""</label></text>
+		<text><label>Name: </label></text>
+		<entry><variable>contactname</variable></entry>
+		<text><label>Surname: </label></text>
+		<entry><variable>contactsurname</variable></entry>
+		<text><label>Phone Number: </label></text>
+		<entry><variable>contactnum</variable></entry>
+		<hbox><button ok></button><button cancel></button></hbox>
+		</vbox></window>'
+		do_statements LNKC_GUI
+
+		[ "$contactname" = "" ] && exit
+		[ "$contactsurname" = "" ] && exit
+		[ "$contactnum" = "" ] && exit
+		
+		sqlite3 $DB "insert into contacts(Name, Surname, Phone) values(\"$contactname\",\"$contactsurname\",\"$contactnum\");"
+		db2txt
+	;;
+	
+	newnote)
+		export NOTE_GUI='<window  title="Note" width-request="500" height-request="420"><vbox>
+		<text><label>""</label></text>
+		<hbox><text><label>Title: </label></text>
+		<entry><variable>notename</variable></entry></hbox>
+		<edit>
+		<variable>note</variable>
+		</edit>
+		<hbox><button><label>Save</label><input file stock="gtk-save"></input>
+		<action>exit:OK</action>
+		</button><button cancel></button></hbox>
+		</vbox></window>'
+		do_statements NOTE_GUI
+		
+		[ "$notename" = "" ] && exit
+		[ "$note" = "" ] && exit
+		note=$(echo "$note" | sed ':a;N;$!ba;s/\n/<br>/g' | sed "s/'/''/g")
+		sqlite3 $DB "insert into notes(name,note) values (\"$notename\",\"$note\");"
+		db2txt
+	;;
+	
+		editn)
+		[ "$2" = "" ] && exit
+		getnote=$(sqlite3 $DB "select * from notes where Id=\"$2\";")
+		Id=$(echo "$getnote" | cut -d "|" -f1)
+		notename=$(echo "$getnote" | cut -d "|" -f2)
+		#note=$(echo "$getnote" | cut -d "|" -f3)
+		echo "$getnote" | cut -d "|" -f3 > $tmp/mytempnote.txt
+		sed -i 's/<br>/\n/g' $tmp/mytempnote.txt
+		sed -i "s/''/'/g" $tmp/mytempnote.txt
+		export NOTD_GUI='<window title="Note" width-request="500" height-request="420"><vbox>
+		<text><label>""</label></text>
+		<text><label>Id: '"$Id"'</label></text>
+		<hbox><text><label>Title: </label></text>
+		<entry><variable>notename</variable><default>'"$notename"'</default></entry></hbox>
+		<edit>
+		<variable>note</variable>
+		<input file>'"$tmp"'/mytempnote.txt</input>
+		</edit>
+		<hbox><button><label>Save</label><input file stock="gtk-save"></input>
+		<action>exit:OK</action>
+		</button><button cancel></button></hbox>
+		</vbox></window>'
+		do_statements NOTD_GUI
+		
+		[ "$notename" = "" ] && exit
+		[ "$note" = "" ] && exit
+		note=$(echo "$note" | sed ':a;N;$!ba;s/\n/<br>/g' | sed "s/'/''/g")
+		sqlite3 $DB "update notes set name=\"$notename\",note=\"$note\" where Id=\"$Id\";"
+		db2txt
+	;;
+	
+	del)
+		[ "$2" = "" ] && exit
+		export CONFIRMGUI='<window><vbox><text><label>Really delete this link?</label></text><hbox><button ok></button><button cancel></button></hbox></vbox></window>'
+		do_statements CONFIRMGUI
+		
+		CAT=$(sqlite3 $DB "select Category from links where Id=\"$2\";")
+		sqlite3 $DB "delete from links where Id=\"$2\";"
+		HASCAT=$(sqlite3 $DB "select * from links where Category=\"$CAT\";")
+		[ "$HASCAT" = "" ] && sqlite3 $DB "delete from categories where name=\"$CAT\";"
+		db2txt 
+	;;
+	
+	delc)
+		[ "$2" = "" ] && exit
+		export CONFIRMDEL='<window><vbox><text><label>Really delete this contact?</label></text><hbox><button ok></button><button cancel></button></hbox></vbox></window>'
+		do_statements CONFIRMDEL
+
+		sqlite3 $DB "delete from contacts where Id=\"$2\";"
+		db2txt 
+	;;
+	
+	deln)
+		[ "$2" = "" ] && exit
+		export CONFIRMDEL='<window><vbox><text><label>Really delete this note?</label></text><hbox><button ok></button><button cancel></button></hbox></vbox></window>'
+		do_statements CONFIRMDEL
+
+		sqlite3 $DB "delete from notes where Id=\"$2\";"
+		db2txt 
+	;;	
+	
+	edit)
+		CATITEMS=$(sqlite3 $DB "select * from categories;")
+		CATS=""
+		for i in $CATITEMS;do
+			CATS="$CATS <item>$i</item>"
+		done
+		
+		[ "$2" = "" ] && exit
+		ELNK=$(sqlite3 $DB "select * from links where Id=\"$2\";")
+		Id=$(echo "$ELNK" | cut -d "|" -f1)
+		LNK=$(echo "$ELNK" | cut -d "|" -f2)
+		TTL=$(echo "$ELNK" | cut -d "|" -f3)
+		CAT=$(echo "$ELNK" | cut -d "|" -f4)
+		[ "$CAT" = "" ] && CAT="Miscellaneous"
+		OLDCAT="$CAT"
+		export LNKEDIT_GUI='<window><vbox>
+		<text><label>Id: '"$Id"'</label></text>
+		<text><label>Link: </label></text>
+		<entry><variable>LNK</variable><default>'$LNK'</default></entry>
+		<text><label>Title: </label></text>
+		<entry><variable>TTL</variable><default>'$TTL'</default></entry>
+		<text><label>Category: </label></text>
+		<comboboxentry><variable>CAT</variable><default>'$CAT'</default>
+		'"$CATS"'
+		</comboboxentry>
+		<hbox><button ok></button><button cancel></button></hbox>
+		</vbox></window>'
+		
+		do_statements LNKEDIT_GUI		
+
+		[ "$LNK" = "" ] && exit
+		[ "$TTL" = "" ] && exit
+		[ "$CAT" = "" ] && CAT="Miscellaneous"
+		
+		sqlite3 $DB "update links set Link=\"$LNK\", Title=\"$TTL\", Category=\"$CAT\" where Id=\"$2\";"
+		HASCAT=$(sqlite3 $DB "select * from categories where name=\"$CAT\";")
+		[ "$HASCAT" = "" ] && sqlite3 $DB "insert into categories values(\"$CAT\");"
+		HASOLDCAT=$(sqlite3 $DB "select * from links where Category=\"$OLDCAT\";")
+		[ "$HASOLDCAT" = "" ] && sqlite3 $DB "delete from categories where name=\"$OLDCAT\";"
+		db2txt 
+	;;
+	
+	editc)
+		[ "$2" = "" ] && exit
+		ELNK=$(sqlite3 $DB "select * from contacts where Id=\"$2\";")
+		Id=$(echo "$ELNK" | cut -d "|" -f1)
+		contactname=$(echo "$ELNK" | cut -d "|" -f2)
+		contactsurname=$(echo "$ELNK" | cut -d "|" -f3)
+		contactnum=$(echo "$ELNK" | cut -d "|" -f4)
+
+		export CNTEDIT_GUI='<window><vbox>
+		<text><label>Id: '"$Id"'</label></text>
+		<text><label>Name: </label></text>
+		<entry><variable>contactname</variable><default>'$contactname'</default></entry>
+		<text><label>Surname: </label></text>
+		<entry><variable>contactsurname</variable><default>'$contactsurname'</default></entry>
+		<text><label>Phone Number: </label></text>
+		<entry><variable>contactnum</variable><default>'$contactnum'</default></entry>
+		<hbox><button ok></button><button cancel></button></hbox>
+		</vbox></window>'
+		
+		do_statements CNTEDIT_GUI
+		[ "$EXIT" != "OK" ] && exit
+		[ "$contactname" = "" ] && exit
+		[ "$contactsurname" = "" ] && exit
+		[ "$contactnum" = "" ] && exit
+		
+		sqlite3 $DB "update contacts set NAme=\"$contactname\", Surname=\"$contactsurname\", Phone=\"$contactnum\" where Id=\"$2\";"
+		db2txt 
+	;;
+	
+	go)
+		[ "$2" = "" ] && exit
+		LNK=$(sqlite3 $DB "select Link from links where Id=\"$2\";")
+		exec defaultbrowser $LNK 
+	;;
+	
+	## OPEN RANDOM LINK IN BROWSER ##
+	randlnk) 
+		RNDLNK=$(sqlite3 $DB "select Link from links order by random() limit 1;")
+		exec defaultbrowser $RNDLNK 
+	;;
+	
+	export)
+		sqlite3 $DB "select * from links;" >$tmp/linkstemp.txt
+		echo '<html><head><title>My Links</title></head><body>' > $tmp/links.html
+		while read line; do
+			Link=$(echo $line | cut -d "|" -f2)
+			Title=$(echo $line | cut -d "|" -f3)
+			echo "$Link - $Title"
+			echo "<a href=\"$Link\">$Title</a><br>" >> $tmp/links.html
+		done < $tmp/linkstemp.txt
+		echo '</body></html>' >>  $tmp/links.html
+		defaultbrowser $tmp/links.html &
+	;;
+	
+	filter)
+		[ "$2" = "" ] && exit
+		CAT="$2"
+		[ "$CAT" != "ALL" ] && sqlite3 $DB "select * from links where Category=\"$CAT\";" > $tmp/mylinks.txt
+		[ "$CAT" = "ALL" ] && sqlite3 $DB "select * from links;" > $tmp/mylinks.txt
+	;;
+	
+	prefs)
+	PASS=$(sqlite3 $DB "select value from settings where setting=\"password\";")
+	if [ "$PASS" != "0" ]; then
+			PSWGUI='<text><label>Change or clear password</label></text>
+			<text><label>(Leave new pass entries empty to clear pass)</label></text>
+			<hbox><text><label>Current pass:</label></text><entry><variable>CPASS</variable></entry></hbox>
+			<hbox><text><label>New pass:</label></text><entry><variable>NPASS</variable></entry></hbox>
+			<hbox><text><label>Confirm new pass:</label></text><entry><variable>NPASS2</variable></entry></hbox>
+			'
+	else
+			PSWGUI='<text><label>Create password</label></text>
+			<hbox><text><label>New pass:</label></text><entry><variable>NPASS</variable></entry></hbox>
+			<hbox><text><label>Confirm new pass:</label></text><entry><variable>NPASS2</variable></entry></hbox>
+			'
+	fi
+	
+	export LNKPREFS='<window><vbox>
+	'$PSWGUI'
+	<hbox><button ok></button><button cancel></button></hbox>
+	</vbox></window>'
+
+	do_statements LNKPREFS 
+	
+	if [ "$PASS" != "0" ]; then
+		CPASS=$(echo $CPASS | md5sum | gawk '{print $1}')
+		[ "$CPASS" != "$PASS" ] && exit
+	fi
+	
+	if [ "$NPASS" = "$NPASS2" ]; then
+		if [ "$NPASS" = "" ]; then
+			sqlite3 $DB "update settings set value=\"0\" where setting=\"password\";"
+		else
+			NPASS=$(echo $NPASS | md5sum | gawk '{print $1}')
+			sqlite3 $DB "update settings set value=\"$NPASS\" where setting=\"password\";"
+		fi
+	else
+		Xdialog --msgbox "Passwords don't match!" 0 0 
+	fi
+	
+	## END PREFERENCES FUNC ##
+	;;
+	
+	*)
+		db2txt
+		## CREATING MAIN GUI HERE ##
+		
+		## ASK FOR PASS IF SET ##
+		
+		PASS=$(sqlite3 $DB "select value from settings where setting=\"password\";")
+		if [ "$PASS" != "0" ]; then
+			PASS1=$(Xdialog --password --inputbox "Password:" 0 0 2>&1)
+			PASS1=$(echo $PASS1 | md5sum | gawk '{print $1}')
+			[ "$PASS" != "$PASS1" ] && exit
+		fi
+		
+		## GET CATEGORIES ##
+		CATS="<item>ALL</item>"
+		CATITEMS=$(sqlite3 $DB "select * from categories order by name asc;")
+		if [ "$CATITEMS" != "" ]; then
+			while read -r line; do
+				CATS="$CATS <item>$line</item>"
+			done <<< "$CATITEMS"
+			#for i in $CATITEMS;do
+			#	CATS="$CATS <item>$i</item>"
+			#done
+		fi
+				
+		export LNK_GUI='<window title="My Links & Contacts"><vbox>
+		<notebook labels="Links|Contacts|Notes">
+			<frame>
+				<text><label>BOOKMARKS</label></text>
+				<hbox>
+					<button relief="2" tooltip-text="Add link"><action>$THISSCRIPT add --db=$DB</action><input file stock="gtk-new"></input><action>refresh:linkid</action></button>
+					<button relief="2" tooltip-text="Edit link"><action>$THISSCRIPT edit $linkid --db=$DB</action><input file stock="gtk-edit"></input><action>refresh:linkid</action></button>
+					<button relief="2" tooltip-text="Delete link"><action>$THISSCRIPT del $linkid --db=$DB</action><input file stock="gtk-cancel"></input><action>refresh:linkid</action></button>
+					<button relief="2" tooltip-text="Export HTML/Show in browser"><action>$THISSCRIPT export --db=$DB &</action><input file stock="gtk-open"></input></button>
+					<button relief="2" tooltip-text="Open random link in browser"><action>$THISSCRIPT randlnk --db=$DB &</action><input file stock="gtk-help"></input></button>
+				</hbox>
+				<tree column-visible="false|false|true|true" headers-visible="true" rules-hint="true" exported-column="0">
+    			<label>Id|Link|Title|Category</label>
+    			<height>330</height><width>400</width>
+    			<variable>linkid</variable>
+    			<input file>'"$tmp"'/mylinks.txt</input>
+    			<action>$THISSCRIPT go $linkid  --db=$DB &</action>
+  				</tree>
+  				<hbox><text><label>Filter by category: </label></text>
+		<comboboxtext><variable>CAT</variable>
+		'"$CATS"'
+		<action>$THISSCRIPT filter "$CAT" --db=$DB</action><action>refresh:linkid</action></comboboxtext>
+		</hbox>
+			</frame>
+			<frame>
+				<text><label>CONTACTS</label></text>
+				<hbox>
+					<button relief="2" tooltip-text="Add Contact"><action>$THISSCRIPT newcontact --db=$DB</action><input file stock="gtk-new"></input><action>refresh:contactid</action></button>
+					<button relief="2" tooltip-text="Edit Contact"><action>$THISSCRIPT editc $contactid --db=$DB</action><input file stock="gtk-edit"></input><action>refresh:contactid</action></button>
+					<button relief="2" tooltip-text="Delete Contact"><action>$THISSCRIPT delc $contactid --db=$DB</action><input file stock="gtk-cancel"></input><action>refresh:contactid</action></button>
+				</hbox>
+				<tree column-visible="false|true|true|true" headers-visible="true" rules-hint="true" exported-column="0">
+    			<label>Id|Name|Surname|Phone</label>
+    			<height>330</height><width>400</width>
+    			<variable>contactid</variable>
+    			<input file>'"$tmp"'/mycontacts.txt</input>
+    			<action>$THISSCRIPT editc $contactid --db=$DB</action>
+    			<action>refresh:contactid</action>
+  				</tree>
+			</frame>
+			<frame>
+				<text><label>NOTES</label></text>
+				<hbox>
+					<button relief="2" tooltip-text="Add Note"><action>$THISSCRIPT newnote --db=$DB</action><input file stock="gtk-new"></input><action>refresh:noteid</action></button>
+					<button relief="2" tooltip-text="Edit Note"><action>$THISSCRIPT editn $noteid --db=$DB</action><input file stock="gtk-edit"></input><action>refresh:noteid</action></button>
+					<button relief="2" tooltip-text="Delete Note"><action>$THISSCRIPT deln $noteid --db=$DB</action><input file stock="gtk-cancel"></input><action>refresh:noteid</action></button>
+				</hbox>
+				<tree column-visible="false|true" headers-visible="true" rules-hint="true" exported-column="0">
+    			<label>Id|Note</label>
+    			<height>330</height><width>400</width>
+    			<variable>noteid</variable>
+    			<input file>'"$tmp"'/mynotes.txt</input>
+    			<action>$THISSCRIPT editn $noteid --db=$DB</action>
+    			<action>refresh:noteid</action>
+  				</tree>
+			</frame>
+		</notebook>
+		<hbox>
+		<text><label>Database: '"$DB"'</label></text>
+		<button relief="2" tooltip-text="Preferences"><input file stock="gtk-preferences"></input><action>$THISSCRIPT prefs --db=$DB &</action></button>
+		<button relief="2" tooltip-text="Load database"><input file stock="gtk-open"></input><action>exec $THISSCRIPT --load &</action><action>exit:Load</action></button>
+		<button relief="2" tooltip-text="Exit"><input file stock="gtk-quit"></input><action>exit:Quit</action></button>
+		</hbox>
+		</vbox></window>'
+		
+		gtkdialog --program=LNK_GUI --center 
+		rm -r $tmp
+	;;
+	
+esac

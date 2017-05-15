@@ -1,0 +1,17 @@
+#!/bin/bash
+
+#DMENU='dmenu -l 12 -x 200 -y 30 -w 600 -nb '#4E4E4E' -nf '#eeeeee' -sb '#5E656B' -fn -misc-fixed-*-*-*-*-20-200-*-*-*-*-*-*'
+DMENU='dmenu -l 12 -x 200 -y 30 -w 600 -nb '#4E4E4E' -nf '#eeeeee' -sb '#5E656B' -fn Inconsolata-12'
+
+
+#GS=`cat ~/.gshist | $DMENU $*`
+#below without history
+GS=`echo | $DMENU $*`
+
+#if grep -q "$GS" "$HOME/.gshist" ; then
+#    echo already exists in history
+#else
+#    echo $GS >> ~/.gshist
+#fi
+
+google-chrome-beta http://www.google.co.uk/search?q="$GS"
