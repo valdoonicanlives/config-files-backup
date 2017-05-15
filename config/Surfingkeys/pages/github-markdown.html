@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta http-equiv="Content-Security-Policy" content="script-src 'unsafe-eval' 'sha256-nWgGskPWTedp2TpUOZNWBmUL17nlwxaRUKiNdVES5rE='">
+        <meta charset="UTF-8">
+        <title>Markdown preview</title>
+        <link rel="stylesheet" href="../content_scripts/content_scripts.css">
+        <link rel="stylesheet" href="common.css">
+        <link rel="stylesheet" href="github-markdown.css">
+    </head>
+    <body>
+        <!-- build:common_content -->
+        <script src="../libs/trie.js"></script>
+        <script src="../libs/jquery.js"></script>
+        <script src="../content_scripts/utils.js"></script>
+        <script src="../content_scripts/debug_utils.js"></script>
+        <script src="../content_scripts/runtime.js"></script>
+        <script src="../content_scripts/normal.js"></script>
+        <script src="../content_scripts/visual.js"></script>
+        <script src="../content_scripts/hints.js"></script>
+        <!-- endbuild -->
+        <script src="../content_scripts/front.js"></script>
+        <script src="../content_scripts/content_scripts.js"></script>
+        <script src="default.js"></script>
+        <script src="../content_scripts/top.js"></script>
+
+        <script src="../libs/marked.min.js"></script>
+        <script src="github-markdown.js"></script>
+        <div class="description">
+            <h3>Preview your markdown snippets in clipboard</h3>
+            <ul>
+                <li><kbd>r</kbd> to refresh this page to reload markdown from clipboard.</li>
+                <li><kbd>i</kbd> or <kbd>sm</kbd> to open vim editor to edit markdown.</li>
+            </ul>
+        </div>
+        <div class="content">
+            <div class="markdown-body">
+                Loading ...
+            </div>
+        </div>
+    </body>
+</html>

@@ -1,0 +1,102 @@
+Ranger:
+arrow keys or hjkl  to navigate
+' shows list of bookmarked dirs to choose from or type it again to go to the last dir you were in
+m for bookmark history
+ENTER = open a file or arrow keys- right to go into folder left to go out
+dd = cut
+ud = uncut
+yy = copy
+pp=paste
+po=paste+overwrite
+to rename  C_w then the new name C-c to cancel it
+E = edit current file in editor (nano)
+i = when you are on a textfile for intstance and you press i it opens full screen and i to toggleit back
+S =  open a shell in the current dir
+/ = search for files in the current dir
+: = open the console
+to enter normal terminal commands 
+:cd ~/.config
+:rename newname
+:find nameoffile  esc to quit the find
+F7=cosole makedir
+F8 console delete
+DELETE key=  shell trash-put %s
+
+
+
+TABS are handy
+make a new tab and open a destination dir
+then in the tab you are in you can copy or cut then
+tab to the other dir to paste
+C-n = new tab
+C-w = close tab
+press the Tab key to tab between tabs
+
+
+Q = quit
+:delete to delete a file
+:mkdir mytest   to create a folder
+:touch myfile   to create a file
+
+Bookmarking
+when in a folder press m followed by a single letter - you cant use more than one letter
+so maybe t would be for text-files dir and m for music
+then to get to that bookmark press ' and you will be shown a list of your bookmarks type the letter you want
+if you just press the sigle quote key again ' you are taken to the last dir you were in, keep pressing ' and you keep
+going back to the dir before that etc.
+m for bookmark history
+zh = show hidden toggle
+----
+some bookarks in rc.conf
+some bookmarks i have
+map gh cd ~
+map ge cd /etc
+map gd cd /home/dka/Documents
+map gl cd -r .
+map gL cd -r %f
+map gm cd /home/dka/music
+map gM cd /mnt
+
+1? for list of keybindings
+2? for commands
+3? settings
+? for help
+----------------
+After startup, ranger creates a directory ~/.config/ranger/. You can copy the default configuration files to this directory with the following command:
+
+ranger --copy-config=all
+
+They can then be customized. Some basic knowledge of python is useful.
+
+    rc.conf controls startup commands and key bindings
+    commands.py controls the commands which are launched with the ":" key
+    rifle.conf controls the applications used when a given type of file is launched. 
+
+You can launch files with "l" (ell) or "<Enter>". For rc.conf, you need only include changes from the default file, since both are loaded. For commands.py, if you do not include the whole file, put this line at the top:
+
+from ranger.api.commands import *
+
+--------------
+version 1.6 or later
+ Added feature to draw images inside the console using w3mimgdisplay (you need
+  to add "set preview_images true" in rc.conf
+------------
+line 224 says
+map <DELETE>   console delete is default have changed it to below DK
+map <DELETE>   shell trash-put %s
+you can install trash-cli and map it to the Delete key instead so taht files go to the trash have done DK
+-------------
+The following example shows how to use "DD" to move selected files to a directory ~/.Trash/. Put this code in ~/.config/ranger/rc.conf
+
+# move to trash
+map DD shell mv -t /home/myname/.config/ranger/Trash %s
+----------
+ Opening files with a given application
+
+Modify ~/.config/ranger/rifle.conf. Since the beginning lines are executed first, you should put your modifications at the beginning of the file. For example, the following entry will open a tex file with kile.
+
+ext tex = kile "$@"
+------------
+ External Drives
+
+External drives can be automatically mounted with a udev rule or with the help of an automounting Udev wrapper. Drives mounted under /media can be easily accessed by pressing gm (go, media). 

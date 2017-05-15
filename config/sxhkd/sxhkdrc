@@ -1,0 +1,165 @@
+# wm independent hotkeys #
+
+#the mode switch is the AltGr key right of the spacebar key but can use super (win)if you want
+# super=the windows key
+
+#Reload sxhkd
+mode_switch +u
+    killall -SIGUSR1 sxhkd
+    sxhkd -f 50 -c '/home/dka/.config/sxhkd/sxhkdrc'
+# pkill -USR1 -x sxhkd -f 50 -c '/home/dka/.config/sxhkd/sxhkdrc'
+#-----------
+# below is to launch a term with fzf runnig to launch apps, just wanted to try it
+alt + c
+	~/bin/quake_fzf
+control + t
+       ~/bin/quake_rxvt
+alt + v
+	~/bin/urxvtq
+# search using fzf_locate function and then open in ranger
+# demo: https://www.youtube.com/watch?v=C64LKCZFzME
+alt + s
+	leafpad
+#	"xterm -fullscreen -fg white -bg black -fa 'Monospace' -fs 14 -e (/home/dka/bin/ranger-fm/ranger.py --cmd=fzf-locate)"
+  
+#win+s is used by i3wm so is win+shift+s
+mode_switch + y
+	~/bin/snippy
+mode_switch + shift + y
+	~/bin/snippypw
+mode_switch + c
+		 /home/dka/bin/doublecmd/doublecmd.sh
+# rofi search
+mode_switch + 4
+	xdg-open "$(locate home media | rofi -threads 0 -width 100 -color-window "#000000, #000000, #000000" -color-normal "#000000, #b3e774, #000000, #b3e774, #000000" -color-active "#000000, #b3e774, #000000, #b3e774, #000000" -color-urgent "#000000, #b3e774, #000000, #b3e774, #000000" -dmenu -i -p "locate:")"
+#super + d
+#		 /home/dka/bin/doublecmd/doublecmd.sh
+mode_switch + m
+	mc
+mode_switch + d
+		~/bin/dmenu-aliases
+mode_switch + shift + d
+		~/bin/d-edit
+# rofi-surfraw-websearch: web search via surfraw
+# sr $(sr -elvi | gawk '{ print $1 }' | dmenu -p search )
+mode_switch + shift + s
+	~/bin/rofi-surfraw
+# rofi-surfraw-bookmarks: bookmarks with tags via surfraw
+mode_switch + shift + b
+	surfraw -browser=chromium "$(cat ~/.config/surfraw/bookmarks | sed '/^$/d' | sed '/^#/d' | sed '/^\//d' | sort -n | rofi  -dmenu -mesg ">>> Edit to add new bookmarks at ~/.config/surfraw/bookmarks" -i -p "bookmarks: ")"
+mode_switch + w
+	  ~/bin/dmenu-website-choose
+#mode_switch + c
+#        /home/dka/bin/dmenus-caller.sh
+mode_switch + x
+	 /home/dka/bin/dmenu_extended_run
+mode_switch + l
+	lighthouse | sh
+mode_switch + 5
+	pragha
+#changed below from just google-chrome-beta to put cache in tmp
+mode_switch + i
+	chromium --disk-cache-dir=/tmp/cache
+#space + @w
+#    chromium --disk-cache-dir=/tmp/cache http://www.buienradar.nl/weer/huizen/nl/2753468/3uurs
+mode_switch + e
+	claws-mail
+#mode_switch + z
+#		zlauncher
+mode_switch + g
+	geany
+# Terminal  launch- (use urxvt)
+shift + Return
+	urxvt
+mode_switch + o
+	interrobang
+#below were for JWM don't work with DWM
+#mode_switch + 5
+#	wmtiler.sh -v
+#mode_switch + 6
+#	wmtiler.sh -h
+# download folder
+#super + Alt + d
+#	xdg-open ~/Downloads
+  
+mode_switch + h
+        xfe
+#super + w
+#	skippy-xd
+alt + f
+    /home/dka/bin/rofi-bangs
+#rofi -show run
+alt + b
+	/home/dka/bin/rofi-bookmarks
+alt + m
+	/home/dka/bin/rofi-move-app-to-current
+mode_switch + p
+    rofi-pass
+control + shift + d
+	/home/dka/bin/dark-screen
+Print
+	/home/dka/bin/screenshot-scripts/myscreenshot.sh
+mode_switch + {r, shift + r}
+	{ranger-urxvt,ranger}
+#pause-play in mpd(mpc)
+#mode_switch + p
+#	mpc toggle && notify-send --hint=int:transient:1 -t 2000 "MPD" "`mpc | sed -n 2p`" && notify-send --hint=int:transient:1 -t 2000 "MPD" "`mpc current`"
+# note-taking
+mode_switch + q
+	/home/dka/bin/clipper
+#
+mode_switch + shift + b
+	 urxvt -e dwbmarks
+mode_switch + shift + p
+	urxvt -e dwbmrx
+mode_switch + shift + m
+	startmpd-onlyifnotrunning
+
+#############
+# bring apps to top ############
+#below works in Snapwm + DWM + Herbstluft but not in Openbox
+#alt + t
+#	   /home/dka/bin/xdotool-show-app.sh urxvt
+# below works in dwm (but you have to press it twice) but not in snapwm think it is something to do with Sublime
+#mode_switch + s
+#	   /home/dka/bin/xdotool-show-app.sh Sublime_text
+# This works better than above though, you only have to press the combo once-doesn't work on openbox-though or Snapwm or herbst
+#mode_switch + s
+#	xdotool search "Sublime_text" windowactivate &> /dev/null
+#THis works in DWM + Openbox
+#mode_switch + u
+#	xdotool search "URxvt" windowactivate &> /dev/null
+#focus geany - working with DWM not with Snapwm or Herbst
+#mode_switch + control + g
+#	xdotool search "Geany" windowactivate &> /dev/null
+# again works with dwm but not snapwm and the xdotool show appscript doesn'twork right with spacfm
+#Focus Spacefm
+#mode_switch + control + h
+#	xdotool search "Spacefm" windowactivate &> /dev/null
+#	/home/dka/bin/xdotool-show-app.sh Spacefm
+##################
+#below alt keys work but not using them now
+#alt + Left
+#	winmove $wind left
+#alt + Right
+#	winmove $wind right
+
+
+#super + s
+#      xdotool getactivewindow windowmove 5 5
+#Volume control#########################
+mode_switch + Down
+	amixer -qc 0 set Master 5%- && amixer set Master 5%-
+#/home/dka/bin/volnoti-controller2 down
+# above also works but doesn't show icon which works better on youtube as the icon appearing causes slight stuttering 
+# this works and also shows icon   /home/dka/.scripts/volnoti-controller down
+
+mode_switch + Up
+	amixer -qc 0 set Master 5%+ && amixer set Master 5%+
+#/home/dka/bin/volnoti-controller2 up
+#/home/dka/.scripts/volnoti-controller up
+
+#MUTE sound#############################
+mode_switch + F8
+	~/bin/volnoti-controller2 mute
+#amixer sset Master toggle

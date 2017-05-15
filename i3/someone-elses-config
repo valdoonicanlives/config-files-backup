@@ -1,0 +1,199 @@
+# i3 config file (v4)
+
+# default modifier key
+set $mod Mod4
+
+# font for window titles and bar unless a different font
+# is used in the bar block below. ISO 10646 = Unicode
+#font -misc-fixed-medium-r-normal--13-120-75-75-C-70-iso10646-1
+#font pango:DejaVu Sans Mono 10
+font pango:droid sans 10
+
+# open new widows at the bottom by default
+default_orientation vertical
+
+# border for new window
+new_window 1pixel
+
+# focus follows mouse
+focus_follows_mouse no
+
+# toggle between all layouts
+bindsym $mod+space layout toggle all
+
+# go to the next urgent workspace, latest first
+bindsym $mod+u [urgent="latest"] focus
+
+# kill focused window
+bindsym $mod+Shift+c kill
+
+# change focus
+bindsym $mod+h focus left
+bindsym $mod+j focus down
+bindsym $mod+k focus up
+bindsym $mod+l focus right
+
+# alternatively, you can use the cursor keys:
+bindsym $mod+Left focus left
+bindsym $mod+Down focus down
+bindsym $mod+Up focus up
+bindsym $mod+Right focus right
+
+# move focused window
+bindsym $mod+Shift+h move left
+bindsym $mod+Shift+j move down
+bindsym $mod+Shift+k move up
+bindsym $mod+Shift+l move right
+
+# alternatively, you can use the cursor keys:
+bindsym $mod+Shift+Left move left
+bindsym $mod+Shift+Down move down
+bindsym $mod+Shift+Up move up
+bindsym $mod+Shift+Right move right
+
+# split in horizontal orientation (columns)
+bindsym $mod+v split h
+
+# split in vertical orientation (rows/bstack)
+bindsym $mod+d split v
+
+# enter fullscreen mode for the focused container
+bindsym $mod+f fullscreen
+
+# change container layout
+bindsym $mod+e layout stacking
+bindsym $mod+m layout tabbed
+bindsym $mod+s layout splitv
+
+# toggle tiling / floating
+bindsym $mod+Shift+space floating toggle
+
+# focus the parent container
+bindsym $mod+p focus parent
+
+# focus the child container
+bindsym $mod+c focus child
+
+# custom variables for workspaces
+set $ws1 1:term
+set $ws2 2:media
+set $ws3 3:inet
+set $ws4 4:dev
+set $ws5 5:docs
+set $ws6 6:irc/im
+set $ws7 7:sys
+set $ws8 8:vbox
+set $ws9 9:min
+
+# switch to workspace
+bindsym $mod+ampersand workspace $ws1
+bindsym $mod+eacute workspace $ws2
+bindsym $mod+quotedbl workspace $ws3
+bindsym $mod+apostrophe workspace $ws4
+bindsym $mod+parenleft workspace $ws5
+bindsym $mod+minus workspace $ws6
+bindsym $mod+egrave workspace $ws7
+bindsym $mod+underscore workspace $ws8
+bindsym $mod+ccedilla workspace $ws9
+
+# move focused container to workspace
+bindsym $mod+Shift+ampersand move container to workspace $ws1
+bindsym $mod+Shift+eacute move container to workspace $ws2
+bindsym $mod+Shift+quotedbl move container to workspace $ws3
+bindsym $mod+Shift+apostrophe move container to workspace $ws4
+bindsym $mod+Shift+5 move container to workspace $ws5
+bindsym $mod+Shift+minus move container to workspace $ws6
+bindsym $mod+Shift+egrave move container to workspace $ws7
+bindsym $mod+Shift+underscore move container to workspace $ws8
+bindsym $mod+Shift+ccedilla move container to workspace $ws9
+
+# reload the configuration file
+bindsym $mod+Shift+a reload
+# restart i3 inplace (preserves your layout/session, can be used to upgrade i3)
+bindsym $mod+Shift+r restart
+# exit i3 (logs you out of your X session)
+bindsym $mod+Shift+e exec "i3-nagbar -t warning -m 'You pressed the exit shortcut. Do you really want to exit i3? This will end your X session.' -b 'Yes, exit i3' 'i3-msg exit'"
+
+# Use Mouse+$mod to drag floating windows to their wanted position
+floating_modifier $mod
+
+# resize window (works only in resize mode)
+# or use mod + right mouse button
+mode "resize" {
+        bindsym h resize shrink width 10 px or 10 ppt
+        bindsym j resize grow height 10 px or 10 ppt
+        bindsym k resize shrink height 10 px or 10 ppt
+        bindsym l resize grow width 10 px or 10 ppt
+
+        # same bindings, but for the arrow keys
+        bindsym Left resize shrink width 10 px or 10 ppt
+        bindsym Down resize grow height 10 px or 10 ppt
+        bindsym Up resize shrink height 10 px or 10 ppt
+        bindsym Right resize grow width 10 px or 10 ppt
+
+        # back to normal: Enter or Escape
+        bindsym Return mode "default"
+        bindsym Escape mode "default"
+}
+
+bindsym $mod+r mode "resize"
+
+# window border colours
+# class                 border  backgr. text    indicator
+client.focused          #4c7899 #285577 #ffffff #2e9ef4
+client.focused_inactive #333333 #5f676a #ffffff #484e50
+client.unfocused        #333333 #222222 #888888 #292d2e
+client.urgent           #2f343a #900000 #ffffff #900000
+
+
+# i3bar to display a workspace bar + status script
+bar {
+        position top
+        #status_command i3status --config ~/.i3/i3status.conf
+        status_command conky
+
+        # i3bar colours
+        colors {
+        background #000000
+        statusline #ffffff
+
+        focused_workspace  #4c7899 #285577 #ffffff
+        active_workspace   #333333 #5f676a #ffffff
+        inactive_workspace #333333 #222222 #888888
+        urgent_workspace   #2f343a #900000 #ffffff
+        }
+}
+
+
+# launchers
+
+# start a terminal
+bindsym $mod+Shift+Return exec /usr/bin/urxvtc
+
+# launch gmrun
+bindsym $mod+g exec /usr/bin/gmrun
+
+
+# application specific settings
+
+# float the following
+for_window [class="Gimp"] floating enable
+for_window [class="mplayer2"] floating enable
+for_window [title="cmus-filesize"] floating enable
+for_window [class="feh"] floating enable
+for_window [class="Gmrun"] floating enable
+for_window [class="Wicd-client.py"] floating enable
+
+for_window [class="Firefox" instance="Browser"] floating enable
+for_window [class="Firefox" instance="Dialog"] floating enable
+for_window [class="Firefox" instance="Extension"] floating enable
+for_window [class="Firefox" instance="Abp"] floating enable
+for_window [class="Firefox" instance="Febe"] floating enable
+
+# assign the following to specific workspaces
+
+# firefox
+assign [class="Firefox"] $ws3
+
+# pidgin
+assign [class="Pidgin" instance="Pidgin"] $ws6

@@ -1,0 +1,514 @@
+# NOTE: exec commands will not run when restarting i3, they are performed only on initial startup.
+# if you need a command to run also when restarting i3 you should use the exec_always keyword. These commands will be run in order.
+#example exec_always ~/my_script.sh
+# Commands can be chained by using ; (a semicolon)
+# eg bindsym $mod+x move container to workspace 3; workspace 3
+# When using multiple commands, separate them by using a , (a comma) 
+# i3 config file (v4)
+# only use the hash at the begining of a line!
+# Please see http://i3wm.org/docs/userguide.html for a complete reference!
+# win key will be windows key
+# where you see Mod1 in this config that means alt
+set $win Mod4
+set $alt Mod1
+
+set $cfgdir ~/.i3
+
+set $Quickswitch rofi -show window
+# quickswitch windows
+bindsym $win+Tab exec --no-startup-id $Quickswitch
+bindsym $alt+Tab exec --no-startup-id $Quickswitch
+# toggle the zx program wich shows all apps running in scratchpad,in bar at bottomof screen
+bindsym  $win+shift+v exec --no-startup-id killall -USR1 zx
+# lock screen, think you need i3 lock installed it's a separate app, don't have it installed yet
+# bindsym $win+shift+x exec i3lock --color EC5612
+#bindsym $win+d exec --no-startup-id rofi -show run -hlfg "#ffb964" -o 85
+# font for window titles. ISO 10646 = Unicode
+# As I dont have title bars showing for my apps when I change this setting I wont see any change
+# Will also be used by the bar unless a different font
+# is used in the bar {} block at btm of this file.
+#font xft:DejaVu Sans Mono 10
+# font for window titles. ISO 10646 = Unicode
+font pango:DejaVu Sans 8
+#font -misc-fixed-medium-r-normal--11-120-75-75-C-70-iso10646-1
+#font DroidSans:size=8
+#font Inconsolata:size=9
+
+# Use Mouse+$win to drag floating windows to their wanted position
+floating_modifier $win
+
+# start a terminal with Win+Return
+#commented out for now as using sxhkd keybindings now
+#bindsym $win+Return exec urxvt
+
+
+# startup apps and window decs
+# change it to default (wich is tiled) or stacking if you dont want tabbed
+workspace_layout default
+default_orientation horizontal
+focus_follows_mouse no
+# new window default border-get rid of the title bar except when 2 are tabbed together
+# you can have normal,1pixel or pixel 2 or pixel 3 for more than one pixel width
+new_window pixel 3
+# This would make a title bar only for a specific app
+#for_window [class="(?i)termite"] border normal 0
+# zenburn colors
+# then to use
+#client.focused     $blue    $blue    $dk_grey $orange
+set $dark_grey #333333
+set $md-grey #555555
+set $lt-grey #777777
+set $text-grey #BFBFBF
+set $near-white #EEE7E7
+set $near-black #1c1c1c
+set $green-gray #627C6B
+set $blue #6ca0a3
+set $blue_1 #4c7073
+set $green #42C134
+set $pastelgreen #7f9f7f
+set $cream #F5D7B4
+set $salmon #FFD29E
+set $orange #dfaf8f
+set $yellow #f0dfaf
+set $dark_pink #cc9393
+set $darkred #992828
+set $mid-purple #9f56c8
+set $red #d64937
+set $transparent #0000000F
+# the bar tabs color is defined in the section at the bottom of this file under BAR
+#
+# window colours:         border      background    text     indicator
+#
+#   class                           border        background       text
+#client.focused                #999999 	  #999999 	      #111111
+client.focused                  #D65537     $green    #FDF9F9
+client.focused_inactive   #333333      $green          $near-white
+client.unfocused             #333333      $md-grey        #D8D8D8
+client.urgent                    #E12F2F      #8C5665          #999999
+#
+# the green one client.focused        #0F0F0F #8abd57 #ffffff
+
+#client.focused        #D12C8D #908C8C #ffffff
+
+#client.focused        #6600CC #6600CC #ffffff
+#client.focused_inactive    #0F0F0F #a09999 #E5E5E5
+#client.unfocused    #0F0F0F #716d6d #E5E5E5
+#client.urgent        #0F0F0F #BC9B54 #E5E5E5 #F3F229
+#client.background       #06090d
+
+##============================================================================##
+#                         *** Autostart Programs ***                           #
+##============================================================================##
+#		Autostart Programs		########
+#
+exec --no-startup-id /home/dka/.i3/i3autostart.sh &
+# start compositor, turned it off as not many apps show it, just say spacefm whenyou use the menu
+# exec --no-startup-id compton -b &
+exec --no-startup-id nm-applet &
+#exec --no-startup-id tdrop -a -w 1276 --height '65%' 'urxvt -e start-tmux'  &
+#exec --no-startup-id start-yeahconsole &
+#exec --no-startup-id yeahconsole &
+#exec --no-startup-id yeahconsole -e /home/dka/bin/start-tmux &
+#exec --no-startup-id volnoti &
+#exec --no-startup-id volwheel &
+#exec --no-startup-id xsetroot -solid "2E3436"
+#use hsetroot to set the desktp background colour -you can also set a wallpaper with it.
+#exec --no-startup-id hsetroot -solid "#2E3436" &
+# Start Clipboard manager
+exec --no-startup-id clipit &
+#start the keybinding program
+exec --no-startup-id sxhkd &
+#exec --no-startup-id hsetroot -center /home/boo/IMAGES/wallpapers/zenburn-background-green.png
+#use nitrogen to set desktop backgrnd colour - as openbox does in it's startup script
+#exec --no-startup-id nitrogen --restore &
+#could use feh for picture but i am not at present
+#exec feh --bg-scale '/home/boo/IMAGES/wallpapers/zenburn-background-green.png'
+exec --no-startup-id cherrytree '/home/dka/.cherry/General-Database.ctb' &
+#exec --no-startup-id cpulimit_daemon.sh &
+
+##======================================================================================
+##======================================================================================
+# custom variables for workspaces
+# also try symbols @ ~ < >
+# if you dont include a number first like "3-web" then the desktop when it's created doesn't appear in
+# the correct order, so web might appear last after say 5 instead of place 3
+set $ws1 "1< txt >"
+set $ws2 "2> fm "
+set $ws3 "3< Web >"
+set $ws4 4
+set $ws5 5
+set $ws6 6
+set $ws7 7
+set $ws8 8
+set $ws9 9
+#
+##============================================================================##
+#                         *** Window specific settings ***                     #
+##============================================================================##
+# Window specific settings
+# Assign Windows:
+assign [class="Firefox"] $ws3
+assign [class="Chromium"] $ws3
+assign [class="Google-chrome-beta"] $ws3
+assign [class="^Geany"] $ws1
+#assign [class="^URxvt"] $ws5
+assign [class="Spacefm"] $ws2
+assign [class="Pcmanfm"] $ws2
+assign [class="Doublecmd"] $ws2
+assign [class="Xfe"] $ws2
+assign [class="Cherrytree"] 4
+assign [class="Gvim"] $ws1
+assign [class="Gimp"] $ws5
+assign [class="Wine"] $ws1
+#
+# enable floating mode for these apps
+# config apps:
+
+for_window [instance="Navigator" class="Firefox|Aurora"] border none
+for_window [instance="spacefm" window_role="task_dialog"] floating enable
+for_window [instance="bar" window_role="task_dialog"] floating enable
+for_window [class="Chromium" window_role="browser"] border none
+# use focus command so that you get taken to the workspace it launches on
+for_window [class="Chromium"] focus 
+for_window [class="Spacefm"] focus 
+for_window [class="^URxvt"] floating enable
+#for_window [instance="start-tmux"] floating enable; resize shrink width 10000px; resize grow width 940px; resize shrink height 10000px; resize grow height 700px
+#for_window [instance="start-tmux"] floating enable; resize set 1000 700
+#for_window [instance="urxvtq"] floating enable; resize shrink width 10000px; resize grow width 940px; resize shrink height 10000px; resize grow height 700px;
+# start it at a certain location on screen 1st number is the x position (how far in  from left) and then y, how far down the screen
+for_window [instance="urxvtq"] move absolute position 0px 0px
+for_window [class="Doublecmd"] focus
+for_window [class="^Geany"] focus
+for_window [class="textadept"] focus
+for_window [class="^fzf-menu$"] floating enable
+# could also use a keybinding to lauch and go to certain workspace eg
+#bindsym $win+b exec firefox; workspace 3:web
+#for_window [instance="rofi"] move absolute position 600px 400px for top of screen it would be 0 0
+for_window [class="Chromium" window_role="pop-up"] floating enable
+for_window [class="Xfce4-notifyd"] floating enable; border none; focus mode_toggle
+for_window [class="Lxappearance"] floating enable
+for_window [class="lighthouse"] floating enable
+for_window [class="9menu"] floating enable
+for_window [class="Mystuff"] floating enable
+for_window [class="Workrave"] floating enable
+for_window [class="Xmessage"] floating enable
+for_window [class="Dunst"] floating enable
+#for_window [class="Prog-menu"] floating enable
+for_window [class="Wine"] floating enable; border none
+# new in ver 4.11
+for_window [window_type="dialog"] floating enable
+for_window [window_type="menu"] floating enable
+# to constrain floating window size width first then height
+# -1 means no constraint
+floating_minimum_size 75 x 20
+floating_maximum_size -1 x 778
+# floating_minimum_size 100 x 100
+# floating_maximum_size 1280 x 780
+#to get an app to appear in certain spot
+# for_window [class="Gsimplecal"] floating enable
+# for_window [class="Gsimplecal"] move absolute position 1189px 605px
+# where to show the app, first number is x is how far in from left of screen, y how far down
+#for_window [class="URxvt"] move absolute position 305px 184px
+
+##############################################################################
+#                              ***Keybindings  ***                           #
+##############################################################################
+##	 My Keybindings
+# spawn a web browser
+#bindsym $win+i exec --no-startup-id iceweasel; workspace 3:Web
+#bindsym Mod4+Shift+s exec spacefm workspace 1:Explorer
+#bindsym Mod4+Shift+g exec gvim; workspace 2:Text-ed
+#bindsym Mod4+Shift+Q exec i39menu
+#bindsym $win+Shift+m exec lxpanelctl menu
+# audio keys
+#bindsym XF86AudioRaiseVolume exec amixer set Master 10%+ unmute
+#bindsym XF86AudioLowerVolume exec amixer set Master 10%- unmute
+#bindsym XF86AudioMute exec amixer set Master toggle
+# take a screen shot
+#using xchainkeys instead C-e s = myscreenshot.sh
+#bindsym Mod4+p exec scrot -s '%Y-%m-%d_$wx$h.jpg' -e 'mv $f ~/IMAGES/screenshots/'
+#
+# kill focused window with Win+x changed it to be like DWM
+#bindsym $alt+F4 kill
+bindsym $alt+q kill
+###### change focus ######
+bindsym $win+h focus left
+bindsym $win+j focus down
+bindsym $win+k focus up
+bindsym $win+l focus right
+#bindsym $win+semicolon focus right
+
+# alternatively, you can use the cursor keys:
+bindsym $win+Left focus left
+bindsym $win+Down focus down
+bindsym $win+Up focus up
+bindsym $win+Right focus right
+
+##### move focused window  ##########
+bindsym $win+Shift+H move left
+bindsym $win+Shift+J move down
+bindsym $win+Shift+K move up
+bindsym $win+Shift+l move right
+#bindsym $win+Shift+colon move right
+
+# alternatively, you can use the cursor keys:
+bindsym $win+Shift+Left move left
+bindsym $win+Shift+Down move down
+bindsym $win+Shift+Up move up
+bindsym $win+Shift+Right move right
+
+# split in horizontal orientation
+bindsym $win+v split h
+
+# split in vertical orientation
+bindsym $win+b split v
+
+
+
+# change container layout (stacked, tabbed, default)
+#win t = default wich is tiled
+#win d = tabbed
+bindsym $win+s layout stacking
+bindsym $win+Shift+s layout toggle split
+bindsym $win+t layout default
+bindsym $win+d layout tabbed
+bindsym $win+space layout toggle
+
+
+# enter fullscreen mode for the focused container
+bindsym $win+Shift+f fullscreen
+# toggle tiling / floating
+bindsym $win+f floating toggle
+
+# change focus between tiling / floating windows
+#bindsym $win+space focus mode_toggle
+
+# focus the parent container
+bindsym $win+a focus parent
+
+# focus the child container
+# blanked out as i use it for dmenu
+#bindcode $win+d focus child
+#Show apps, and choose
+# using the command skippy-xd  does the same and looks the same
+bindsym $win+w exec rofi -show window
+#put app on floating with mouse rclick btn on the title bar of the app
+# only works on apps that are in tabbed and stacked mode workspaces
+# this would kill the app on rclick  bindsym --release button3 kill
+bindsym --release button3 floating enable
+# switch to workspace
+#bindsym $alt+l workspace back_and_forth
+bindsym $alt+Left workspace prev
+bindsym $alt+Right workspace next
+bindsym $win+1 workspace $ws1
+bindsym $win+2 workspace $ws2
+bindsym $win+3 workspace $ws3
+bindsym $win+4 workspace $ws4
+bindsym $win+5 workspace $ws5
+bindsym $win+6 workspace $ws6
+bindsym $win+7 workspace $ws7
+bindsym $win+8 workspace $ws8
+bindsym $win+9 workspace $ws9
+#bindsym $win+0 workspace 10
+
+# move focused container to workspace
+bindsym $alt+Shift+Right move container to workspace next
+bindsym $alt+Shift+Left move container to workspace prev
+bindsym $win+Shift+exclam move container to workspace $ws1
+bindsym $win+Shift+quotedbl move container to workspace $ws2
+bindsym $win+Shift+sterling move container to workspace $ws3
+bindsym $win+Shift+dollar move container to workspace $ws4
+bindsym $win+Shift+percent move container to workspace $ws5
+bindsym $win+Shift+asciicircum move container to workspace $ws6
+bindsym $win+Shift+ampersand move container to workspace $ws7
+bindsym $win+Shift+asterisk move container to workspace $ws8
+bindsym $win+Shift+parenleft move container to workspace $ws9
+#bindsym $win+Shift+parenright move container to workspace 10
+#####################
+mode "focused" {
+    # focus keybindings
+    bindsym i [class="^chromium$"] focus
+    bindsym g [class="^Geany$"] focus
+    bindsym s [class="^Spacefm$"] focus
+     # Exit to the default mode
+    bindsym Return mode "default"
+    bindsym Escape mode "default"
+}
+
+bindsym $alt+x mode "focused"
+##############################################################################
+#                       *** SCRATCHPAD ***                                   #
+##############################################################################
+#*** SCRATCHPAD *** like a minimize and restore function ########
+#move scratchpad - minimized out of sight
+#scratchpad show - restore - bring back to view
+#if theres more than one minimized, restore will cycle through them
+# Make the currently focused window a scratchpad (floating)
+bindsym $alt+Up move scratchpad
+# Use the floating toggle to remove an app from the scratchpad (W-f)
+# Show the first scratchpad window,press again to show any other window in the scratchpad, press again to toggle
+bindsym $alt+Down scratchpad show
+#below works a keybinding for a specific scratchpad not the general one as above,win+g to toggle showing geany
+# use Alt + up  first to move app into scratchpad
+bindsym $win+Shift+g [class="Geany"] move scratchpad
+bindsym $win+g [class="Geany"] scratchpad show
+#Sometimes it would make sense to hard-code focusing on certain windows, ie not using scratchpad
+bindsym mod1+e [class="Spacefm"] focus
+bindsym mod1+g [class="Geany"] focus
+# TERMINAL SCRATCHPAD named popupterm
+exec --no-startup-id urxvt -name popupterm &
+for_window [instance="popupterm"] floating enable;
+for_window [instance="popupterm"] move scratchpad; [instance="popupterm"] scratchpad show; move scratchpad
+bindsym $win+p		[instance="popupterm"] scratchpad show
+# To move an app into a scratchpad on startup, could use it as a toggle terminal like
+#for_window [instance="__scratchpad"] move scratchpad 
+#but guy on internet said best to put command in a shell script so that you can delay the command, like the 2 lines below
+#sleep 5
+#i3-msg '[ title="scratchlilyterm" ] move scratchpad'
+
+#exec --no-startup-id urxvt -name __scratchpad &
+#exec --no-startup-id urxvt -name __scratchpad -e bash -c 'tmux;bash' &
+#
+# so this is working best, alt t to show scratchpad terminal (floating) and press alt downarrow to make it go away.
+#bindsym $alt+t exec --no-startup-id  xdotool search "scratchpad" windowactivate &> /dev/null
+#bindsym $alt+t [class="URxvt"] scratchpad show; floating toggle
+# for_window [class="URxvt"] move absolute position 30px 25px
+# for_window [class="Gsimplecal"] move absolute position 40px 60px
+
+# for use with the i3scratchpaddy  scripts
+# opens app if not already open and puts in scratch pad, press keys again to toggle
+#bindsym $alt+Shift+g  exec --no-startup-id i3scratchpaddy urxvt 800 740 urxvt  -title scratchpad
+#testing for use with a scratchpad tmux terminal
+#
+# Scratchpad setting from http://christian.amsuess.com/blog/config/changed_to_i3wm/
+#bindsym $win+p [instance="^scratchpad$"] scratchpad show; focus
+# below to launch the perpetual terminal on startup
+#exec flock  ~/.i3/scratchpad/lockfile ~/.i3/scratchpad/perpetual_terminal.sh
+# the above script has the name scratchpad and the class URxvt
+#for_window [instance="^scratchpad$"] move scratchpad
+#for_window [instance="^scratchpad$"] move absolute position 40x 240x
+#using marks feature
+#bindsym $win+p [con_mark="term"] scratchpad show; floating toggle
+#for_window [instance="^scratchpad$"] mark "term", move scratchpad
+# below to move to top of screen
+#for_window [instance="^scratchpad$"] move absolute position 0 0
+#for_window [instance="^scratchpad$"] focus 
+
+#exec_always flock $ws1 ~/.i3/scratchpad/lockfile ~/.i3/scratchpad/perpetual_terminal.sh
+
+
+##======================================================================================
+##======================================================================================
+#bindsym $alt+a exec "python3 $cfgdir/i3winmenu.py"
+# reload the configuration file
+bindsym $win+Shift+C reload
+# restart i3 inplace (preserves your layout/session, can be used to upgrade i3)
+bindsym $win+Shift+R restart
+# exit i3 (logs you out of your X session)
+bindsym $win+Shift+E exit
+#
+#### my experiment to use emacs style keybindings - commented it out as not keen on it #######
+#### so you press Win q then another key like g for gedit then escape or enter to get out of mode####
+#mode "progs" {
+#    bindsym g exec gedit; workspace Text-ed(2)
+#    bindsym 9 exec i39menu
+#    bindsym m exec lxpanelctl menu
+#    bindsym h exec spacefm /home/boo, mode "default"
+#    bindsym i exec spacefm /home/boo/images, mode "default"
+#
+#    back to normal-ie get out of emcas mode: Enter or Escape key
+#    bindsym Return mode "default"
+#    bindsym Escape mode "default"
+#}
+#bindsym $win+q mode "progs"
+
+##############################################################################
+#                               resize windows                               #
+##############################################################################
+# resize window (you can also use the mouse for that)
+mode "resize" {
+        # These bindings trigger as soon as you enter the resize mode
+
+        # Pressing left will shrink the window’s width.
+        # Pressing right will grow the window’s width.
+        # Pressing up will shrink the window’s height.
+        # Pressing down will grow the window’s height.
+        bindsym j resize shrink width 10 px or 10 ppt
+        bindsym k resize grow height 10 px or 10 ppt
+        bindsym l resize shrink height 10 px or 10 ppt
+        bindsym semicolon resize grow width 10 px or 10 ppt
+
+        # same bindings, but for the arrow keys
+        bindsym 113 resize shrink width 10 px or 10 ppt
+        bindsym 116 resize grow height 10 px or 10 ppt
+        bindsym 111 resize shrink height 10 px or 10 ppt
+        bindsym 114 resize grow width 10 px or 10 ppt
+
+        # back to normal: Enter or Escape
+        bindsym Return mode "default"
+        bindsym Escape mode "default"
+}
+
+bindsym $win+r mode "resize"
+# Start on workspace 3, might need to use exec --no-startup-id,like
+#exec --no-startup-id i3-msg workspace 3
+#exec --no-startup-id "i3-msg 'workspace $WS3'"
+exec i3-msg workspace 4
+# Start i3bar to display a workspace bar (plus the system information i3status
+# finds out, if available)
+##======================================================================================
+##======================================================================================
+bar {
+		font -misc-fixed-medium-r-normal--11-120-75-75-C-70-iso10646-1
+		#font xft:Tewi-bold-11
+		#font xft:lode
+		#font xft:ProFont 11
+		#font xft:Terminus 10
+        #font pango:dejavu sans 9
+		#font -*-terminus-medium-*-*-*-11-*-*-*-*-*-*-*
+		#font pango:ShareTech Regular 9
+        position top
+        status_command /home/dka/.i3/status 0 #this works 
+        # status_command ". ~/.i3/generate_json_for_i3bar.sh"
+        # to use conky status_command /home/dka/.i3/conky.sh
+		#status_command i3status -c ~/.i3/i3status.conf #need i3status installed 
+        
+        colors {
+			   #background is the tob bar background colour, was #4C4C4C
+               #background #000084  #blue background
+               background #2a2a2a
+               # Statusline value is the color of the time-date top right
+               #statusline #ADD8E6
+               statusline #EDEDED
+               separator #111111
+               #separator #333333
+		       # WORKSPACE                | border  |  background    |   text     |
+               #------------------------------|------------|---------------------|------------|
+               focused_workspace          #252525     $mid-purple      $cream
+			   active_workspace              #252525     $mid-purple      $cream
+			   inactive_workspace           #282828     #282828       $text-grey
+			   urgent_workspace             #ff0000      #313131        #000000
+			   
+               #focused_workspace  #00b0ef #00b0ef #0060a0
+               #>>focused_workspace  #B6B3B1 #6600CC #ffffff
+               ##focused_workspace     #332E2C $near-black $salmon
+               #active_workspace        #333333 #1abc9c #ffffff
+               #inactive_workspace      #D0D0CB #303030 #ECE5E5
+               #urgent_workspace        #da6f00 #8C5665 #FF3333
+               #active_workspace   #00b0ef #00b0ef #0060a0
+               #active_workspace   #2C2C2C #2C2C2C #0066AA
+               #inactive_workspace #0060a0 @0060a0 #00b0ef
+               #inactive_workspace $lt-grey #2C2C2C #CCCCCC
+               #focused_workspace  #161616  #969696  #EDEDED
+			   #active_workspace   #000000 #262524 #CCCCCC
+			   #active_workspace   #161616      #161616  #a5a5a5
+			   #inactive_workspace #000000 #262524 #CCCCCC
+			   #inactive_workspace #161616      #545454  #CCCCCC
+        }
+}
+
+
+
+
+
+

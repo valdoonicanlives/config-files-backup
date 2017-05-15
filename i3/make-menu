@@ -1,0 +1,66 @@
+#!/usr/bin/env bash
+# uses rofi
+set -x
+
+DMENU=$(which rofi)
+PROMPT="?"
+FONT='Ubuntu 12'
+LINES=5
+
+bg="#1c1c1c"
+bg_active="#dcdccc"
+bg_urgent="#bc8383"
+
+fg="#dcdccc"
+fg_active="#1c1c1c"
+fg_urgent="#1c1c1c"
+
+hlbg="#688080"
+hlbg_active="#ffffff"
+hlbg_urgent="#cc9393"
+
+hlfg="#1c1c1c"
+hlfg_active="#1c1c1c"
+hlfg_urgent="#1c1c1c"
+
+border="#688080"
+
+mode="dmenu"
+
+while getopts ":re:p:f:ml:w:h:" opt
+do
+    case $opt in
+        r) mode="run";;
+        e) message="$OPTARG"
+           mode="message";;
+        p) PROMPT="$OPTARG";;
+        f) FONT="$OPTARG";;
+        m) SELECTEDBG="$BG"
+           SELECTEDFG="$FG";; # match colors
+        l) LINES="$OPTARG";;
+        w) width="$OPTARG";;
+        h) height="$OPTARG";;
+        \?) "Invalid option -$OPTARG";;
+        :) "-$OPTARG requires an argument"
+    esac
+done
+
+
+options="-bg "$bg" -fg "$fg" \
+-bg-active "$bg_active" -fg-active "$fg_active" \
+-bg-urgent "$bg_urgent" -fg-urgent "$fg_urgent" \
+-hlbg "$hlbg" -hlfg "$hlfg" \
+-hlbg-active "$hlbg_active" -hlfg-active "$hlfg_active" \
+-hlbg-urgent "$hlbg_urgent" -hlfg-urgent "$hlfg_urgent" \
+-bc "$border" -bw 3"
+
+if [[ "$mode" = "dmenu" ]]
+then
+    $DMENU -dmenu $options -p "$PROMPT" -font "$FONT" -separator-style solid
+elif [[ "$mode" = "run" ]]
+then
+    $DMENU -modi combi -show combi -combi-modi "window,run,drun" -separator-style solid -fuzzy \
+           $options \ -font "$FONT"
+else
+    $DMENU -dmenu $options -e "$message" -separator-style none
+fi

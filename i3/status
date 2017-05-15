@@ -1,0 +1,21 @@
+#!/bin/sh
+# sets the status bar
+# This is what I am using DK
+command="echo"
+
+#if called without an argument then act as a status script for dwm
+if [ -z "$1" ]
+then
+    command="xsetroot -name"
+fi
+
+while true
+do
+    $command "$(date +"%a, %b %d %R")"
+    sleep 10s   
+done 
+#while true
+#do
+#    $command "W: $(iwconfig wlan0 | awk '/Quality/{print $2}' | sed 's/.*=//' | awk -F"/" '{printf("%.0f%%", $1/$2*100)}') | M: $(free -m | perl -ne 'if(/cache:\s+(\d+)/) {printf $1;last;}') mb | C: $(mpstat | perl -ne 'if(/all\s+(\d+\.\d+)/) {printf $1;last;}')% | B: $(acpi | perl -ne 'if(/0:\s+([^%]+)/) {print $1."%";}') | $(date +"%a, %b %d %R")"
+#    sleep 10s   
+#done 

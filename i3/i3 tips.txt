@@ -1,0 +1,36 @@
+As explained in the i3 documentation, to focus on a window of class, say, "Emacs", it is enough to write:
+
+bindsym $mod+x [class="Emacs"] focus
+
+However, I'd like to focus on a Emacs window unless the Emacs window has a certain title, say, "emacs_scratchpad". I'm not sure how to implement the unless bit. Does anyone know?
+
+bindsym $mod+x [class="Emacs" title="^(?!emacs_scratchpad)"] focus
+-----------------------------------
+
+
+# cycle through bstacked windows (dwm style)
+bindsym $mod+Tab focus down
+#to toggle between layout styles instead of W-e or W-w you can use
+bindsym $mod+space layout toggle all
+
+# custom variables for workspaces
+set $ws1 1:term
+set $ws2 2:media
+set $ws3 3:inet
+set $ws4 4:dev
+set $ws5 5:docs
+set $ws6 6:irc/im
+set $ws7 7:sys
+set $ws8 8:vbox
+set $ws9 9:min
+would then need to change things like
+# switch to workspace 
+bindsym $mod+1 workspace $ws1
+bindsym $mod+2 workspace $ws2
+bindsym $mod+3 workspace $ws3
+bindsym $mod+4 workspace $ws4
+bindsym $mod+5 workspace $ws5
+bindsym $mod+6 workspace $ws6
+bindsym $mod+7 workspace $ws7
+bindsym $mod+8 workspace $ws8
+bindsym $mod+9 workspace $ws9

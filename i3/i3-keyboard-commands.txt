@@ -1,0 +1,51 @@
+Win E = default(Tiled)
+Win W= Tabbed
+## toggle tiling / floating
+Win F (it was as below)
+WIN+Shift+space floating toggle
+Win L = toggle between the Tabbed windows
+
+WIN SHIFT f = full size toggle
+
+## change focus between tiling / floating windows
+WIN+space focus mode_toggle 
+
+## Risizing windows : ONLY in Tiled or Floating mode
+press Win r
+then L or j to shrink
+or ; to grow
+then ESC/Enter key to get out of resize mode
+
+####### MOVING WINDOWS ###########
+To move say explorer from tab Explorer to say window 4 press
+Win+Shift+4
+
+
+
+########################################################
+########	 My Keybindings 		########
+########################################################
+# spawn a web browser
+bindsym Mod4+i exec iceweasel; workspace 3:Web
+bindsym Mod4+Shift+s exec snippy1line
+#bindsym Mod4+Shift+s exec spacefm workspace 1:Explorer
+bindsym Mod4+Shift+g exec gedit
+bindsym Mod4+Shift+Q exec i39menu
+bindsym Mod4+Shift+m exec lxpanelctl menu
+# audio keys
+bindsym XF86AudioRaiseVolume exec amixer set Master 10%+ unmute
+bindsym XF86AudioLowerVolume exec amixer set Master 10%- unmute
+bindsym XF86AudioMute exec amixer set Master toggle
+
+
+##################################
+my xchainkeys settings
+
+C-e g :exec gedit
+C-e v :exec gvim
+C-e n :exec nautilus
+C-e 9 :exec i39menu
+C-e d :exec dmenus-caller.sh
+C-e l :exec sublime-text-2
+C-e s :exec myscreenshot.sh
+C-e x :exec lxpanel

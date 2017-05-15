@@ -1,0 +1,29 @@
+was easy to build
+make
+sudo make install
+it copied the exe to
+/usr/local/bin
+
+If no configuration file is specified via the _-c_ option, the following is used: *$XDG_CONFIG_HOME/sxhkd/sxhkdrc*.
+
+-------------
+in the examples folder there is this entry to put in xinitrc
+[ -e "$SXHKD_FIFO" ] && rm "$SXHKD_FIFO"
+mkfifo "$SXHKD_FIFO"
+sxhkd -s "$SXHKD_FIFO" &
+
+not sure what its for yet but think you only need it if you want it to display a notify messege when keys are pressed,
+---------------
+an example file
+to run it - tried it and it worked - aprt from launching claws-mail - think the command it wrong but geany worked
+sxhkd -c ~/.config/sxhkd/myconfig
+myconfig would be the name ofthe file holding your config like the example below
+
+super + o ; {e,w,m}
+    {geany,iceweasel,claws-mail}
+    
+----------------------
+    What do you call the 'alt gr' modifier in sxhkd?
+
+Probably mode_switch.   yes that works
+---------    
