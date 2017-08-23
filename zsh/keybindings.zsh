@@ -51,7 +51,7 @@ if (( ${+terminfo[smkx]} )) && (( ${+terminfo[rmkx]} )); then
 fi
 
 # one below you press Ctrl g and it pushes new files to git for you, doing most of th steps, you justhave to add a comment
-# git
+# git   not working DK
 	function git_prepare() {
 		if [ -n "$BUFFER" ];
 			then
