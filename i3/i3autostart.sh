@@ -22,6 +22,8 @@ wait_for_program () {
 
 # /home/dka/bin/urxvtc -name urxvtq -e /home/dka/bin/start-tmux &
 /home/dka/bin/urxvtc -name urxvtq -geometry 140x34 -e /home/dka/bin/start-tmux &
+sleep 1
+devilspie -a &
 sleep 6
 conky &
 exit

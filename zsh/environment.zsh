@@ -5,7 +5,7 @@
 # timestamps
 #HIST_STAMPS=mm/dd/yyyy
 
-#█ paths
+#paths
 #export PATH=$HOME/bin:/usr/local/bin:/home/dka/.scripts:/home/dka/mygits/kodi-playercorefactory/bash-scripts:/home/dka/.gem/ruby/2.2.0/bin:$PATH
 #export MANPATH=/usr/local/man:$MANPATH
 
@@ -19,7 +19,7 @@ find_alt() { for i;do which "$i" >/dev/null && { echo "$i"; return 0;};done;retu
 # set the default program
 # the first program in the array that is detected on your system will be chosen as the default
 export OPENER=$(find_alt xdg-open exo-open gnome-open )
-export BROWSER=$(find_alt chromium chromium-browser qutebrowser google-chrome firefox $OPENER )
+export BROWSER=$(find_alt palemoon chromium chromium-browser qutebrowser google-chrome firefox $OPENER )
 export BROWSERCLI=$(find_alt w3m links2 links lynx elinks $OPENER )
 export EBOOKER=$(find_alt ebook-viewer $OPENER )
 export EDITOR=$(find_alt nvim nano leafpad geany $OPENER )
@@ -50,3 +50,15 @@ unsetopt HUP
 # a second attempt to exit the shell will succeed. 
 # NO_CHECK_JOBS is best used only in combination with NO_HUP, else such jobs will be killed automatically
 unsetopt CHECK_JOBS
+
+# NNN stuff the terminal file browser settings
+#Set environment variable `NNN_BMS` as a string of `key:location` pairs (max 10) separated by semicolons (`;`):
+# you type b then the shorcut keys ie b dc
+export NNN_BMS='dc:~/Documents;dw:~/downloads;bn:/home/dka/bin/;cfg:~/.config/;scrpt:~./scripts/;mg:~/mygits/;edw:/media/ElementsA/DOWNLOADS/'
+# for launching gui apps from terminal
+# you have to comine it with alias's like
+#alias st='launch sublime_text'
+#alias ta='launch textadept'
+launch() {
+    ( $* &> /dev/null & )
+}

@@ -58,6 +58,8 @@ alias tvim='nvr --remote-silent'
 alias nvim='NVIM_LISTEN_ADDRESS=/tmp/nvimsocket nvim'
 alias vim='nvim'
 alias svim="sudo vim" # Run vim as super user
+alias ac='echo "type-pass" ;/usr/bin/nvim ~/pfolder/p.cpt'
+alias imagemanager='run-geeqie'
 # TMUX
 #alias ta='tmux attach'
 alias ta='tmux att -t dka-tmux'
@@ -66,6 +68,7 @@ alias tkill='tmux kill-session -t dka-tmux'
 #alias emc="emacsclient -n" # no blocking terminal waiting for edit
 # running emacs in terminal wasnt working untill I put in .zprofile
 # export ALTERNATE_EDITOR=""
+alias emacs='emacs -nw'
 alias temacs='emacsclient -nw -t'
 #alias temacs='emacsclient -nw -c -a ""'
 alias gemacs='emacsclient -c'
@@ -74,13 +77,13 @@ alias xe='eval `slmenu < slmenu-progs`'
 #alias sxiv-all=sxiv ./*
 #alias bigtext=printf ''\e]710;%s\007' "xft:DejaVu Sans Mono:pixelsize=18"'
 #alias normaltext=printf ''\e]710;%s\007' "xft:DejaVu Sans Mono:pixelsize=14"'
-alias showalias='cat ~/.zsh_alias'
+alias showalias='cat /home/dka/.zsh/aliases.zsh'
 alias @edit='edit-configs-and-scripts'
 alias Edit='gvim'
 alias edit='urxvt -e nvim'
 #------- Edit config files
 cfg-bashrc() { $EDITOR ~/.bashrc ;}
-cfg-zsh_alias() { $EDITOR ~/.zsh_alias ;}
+cfg-zsh_alias() { $EDITOR /home/dka/.zsh/aliases.zsh ;}
 cfg-zsh_functions() { $EDITOR ~/.zsh_functions ;}
 cfg-bashfunctions() { $EDITOR ~/.bash_functions ;}
 cfg-keybindings() { $EDITOR ~/.config/sxhkd/sxhkdrc ;}
