@@ -1,0 +1,141 @@
+#!/bin/bash
+
+set -e
+
+if [[ $EUID -eq 0 ]]; then
+    echo "This script can't be used as root" >&2
+    exit 1
+fi 
+
+echo " You may use, edit and share if you like to, but credit the original creator"
+echo "when you share and/or edit this script."
+echo ""
+echo "WARNING!: By no means, is the script creator liable for any damage"
+echo "this script creates, either softwarematic or otherwise."
+echo "Use it at your own risk!"
+sleep 5
+
+HOME="${HOME:-$(getent passwd $(id -un) | cut -d: -f6)}"
+XDG_CONFIG_HOME="${XDG_CONFIG_HOME:-$HOME/.config}"
+
+sudo pacman -S git-core wmctrl --noconfirm --needed
+git clone https://aur.archlinux.org/cower.git
+git clone https://aur.archlinux.org/opensnap.git
+git clone https://aur.archlinux.org/pacaur.git
+gpg --recv-keys --keyserver hkp://pgp.mit.edu 1EB2638FF56C0C53
+cd ./cower
+makepkg -sir --noconfirm --needed
+cd ../opensnap
+makepkg -sird --noconfirm --needed
+cd ../pacaur
+makepkg -sir --noconfirm --needed
+cd ../
+rm -rf ./cower
+rm -rf ./opensnap
+rm -rf ./pacaur
+
+
+pacaur -S --noconfirm --needed --noedit gimp firefox hunspell-en vlc mpv alsa-utils alsa-oss cmake pulseaudio pulseaudio-alsa git kalu gufw transmission-gtk gtk-engines cups cups-filters cups-pdf gnome-icon-theme network-manager-applet xfce4-notifyd ntfs-3g dosfstools exfat-utils gparted gxmessage zip unzip unrar p7zip wget gksu tumbler qt4 ffmpegthumbnailer leafpad lxtask xfce4-panel xfce4-pulseaudio-plugin 
+
+echo ""
+echo "The installation is finished, if you need to install oracle-java and"
+echo "flash you can install it with the jre-inst and flashplugin command"
+echo "as a priviledged user."
+echo ""
+sleep 4
+
+echo ""
+echo "Starting basic system configuration"
+echo ""
+sleep 1
+
+echo "Editing openbox autostart configuration"
+echo ""
+sleep 3
+mkdir -p $XDG_CONFIG_HOME/autostart
+mkdir -p $XDG_CONFIG_HOME/openbox
+cat <<-EOF > $XDG_CONFIG_HOME/openbox/autostart
+	#
+	# These things are run when an Openbox X Session is started.
+	# You may place a similar script in $HOME/.config/openbox/autostart
+	# to run user-specific things.
+	#
+
+	# If you want to use GNOME config tools...
+	#
+	#if test -x /usr/lib/openbox/gnome-settings-daemon >/dev/null; then
+	#  /usr/lib/openbox/gnome-settings-daemon &
+	#elif which gnome-settings-daemon >/dev/null 2>&1; then
+	#  gnome-settings-daemon &
+	#fi
+
+	# If you want to use XFCE config tools...
+	#
+	#xfce-mcs-manager &
+	nm-applet &
+	thunar --daemon &
+	xfce4-panel &
+	xfdesktop &
+	xcompmgr &
+	opensnap &
+	xscreensaver -no-splash &
+	# VBoxClient-all &
+	kalu &
+	numlockx &
+	EOF
+
+function copyconf {
+	echo "Remeber to add the new users to the Keep Arch Linux"
+	echo "Up-to-date group"
+	echo ""
+	sleep 3
+	sudo cp -r $XDG_CONFIG_HOME /etc/skel/
+	sudo find /etc/skel/.config -type d -exec chmod 755 {} \; 
+	sudo find /etc/skel/.config -type f -exec chmod 644 {} \;
+}	
+
+
+echo "Do you want to use the current autostart, mimeapps and Keep Arch Linux"
+echo "Up-to-date config for all new users (recommend)?"
+echo ""
+select yn in "Yes" "No"; do
+	case $yn in
+		Yes ) copyconf; break;;
+		No ) break;;
+	esac
+done
+
+cat <<-EOF > /tmp/systctl
+	#!/bin/bash
+	echo "Creating 99-systctl"
+	echo ""
+	touch /etc/sysctl.d/99-sysctl.conf
+	echo "Changing swappiness to 1..."
+	echo ""
+	sleep 3
+	echo "vm.swappiness=1" >> /etc/sysctl.d/99-sysctl.conf
+	echo "Changing vfs cache pressure to 50..."
+	echo ""
+	sleep 3
+	echo "vm.vfs_cache_pressure=50" >> /etc/sysctl.d/99-sysctl.conf
+	echo "Changing dirty background bytes to 16777216..."
+	echo ""
+	sleep 3
+	echo "vm.dirty_background_bytes=16777216" >> /etc/sysctl.d/99-sysctl.conf
+	echo "Changing dirty bytes to 50331648..."
+	echo ""
+	sleep 3
+	echo "vm.dirty_bytes=50331648" >> /etc/sysctl.d/99-sysctl.conf
+	EOF
+chmod +x /tmp/systctl
+
+sudo /tmp/systctl
+
+echo "Basic system configuration is complete, though a reboot is needed."
+echo "If you are running a VirtualBox Client, please uncomment"
+echo "'VBoxClient-all' & in $XDG_CONFIG_HOME/openbox/autostart" 
+echo "and/or /etc/skel/.config/openbox/autostart before you reboot"
+echo "your system."
+echo ""
+echo "This script was written by Erwin Oldebesten on 30/05/2017"
+sleep 5

@@ -1,0 +1,10 @@
+#!/bin/bash
+# name of script  watchit
+
+# Just copy the url in the browsers bar then run this script
+
+echo "copy url into clipboard first"  | dmenu -p "please press ENTER"
+# mpv `xclip -o`
+# using vlc as I can also save the video using vlc
+vlc `xclip -o`
+exit

@@ -1,0 +1,7 @@
+let g:netrw_dirhistmax  =10
+let g:netrw_dirhist_cnt =5
+let g:netrw_dirhist_1='/media/ElementsA/Dropbox/Dropbox/text-files'
+let g:netrw_dirhist_2='/home/dka/text-files-home'
+let g:netrw_dirhist_3='/home/dka'
+let g:netrw_dirhist_4='/home/dka/.backups'
+let g:netrw_dirhist_5='/media/ElementsA/Dropbox/Dropbox/text-files'

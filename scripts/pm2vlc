@@ -1,0 +1,5 @@
+#!/bin/bash
+#while true; do if [[ -n $( xclip -o | grep '^extplay') ]]; then url=$(xclip -o | awk '{print $2}'); mplayer $url; echo $url | xclip -i; fi; sleep 1; done
+
+while true; do if [[ -n $( xclip -o | grep '^extplay') ]]; then url=$(xclip -o | awk '{print $2}'); vlc $url; echo $url | xclip -i; fi; sleep 1; done
+#while true; do if [[ -n $( xclip -o | grep '^watch') ]]; then url=$(xclip -o | awk '{print $2}'); vlc $url; echo $url | xclip -i; fi; sleep 1; done

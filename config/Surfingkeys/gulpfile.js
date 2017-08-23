@@ -4,6 +4,7 @@ var gulp = require('gulp'),
     clean = require('gulp-clean'),
     zip = require('gulp-zip'),
     gulpUtil = require('gulp-util'),
+    babel = require('gulp-babel'),
     gp_uglify = require('gulp-uglify');
 
 gulp.task('clean', function () {
@@ -28,49 +29,65 @@ gulp.task('build_common_content_min', ['clean'], function() {
         "content_scripts/utils.js",
         "content_scripts/runtime.js",
         "content_scripts/normal.js",
+        "content_scripts/insert.js",
         "content_scripts/visual.js",
         "content_scripts/hints.js",
     ])
     .pipe(gp_concat('common_content.min.js'))
+    .pipe(babel({presets: ['es2015']}))
     .pipe(gp_uglify().on('error', gulpUtil.log))
     .pipe(gulp.dest('dist/content_scripts'));
 });
 
 gulp.task('use_common_content_min', ['copy-non-js-files', 'clean'], function() {
-    gulp.src([
+    return gulp.src([
         'pages/frontend.html',
         'pages/error.html',
         'pages/options.html',
         'pages/popup.html',
         'pages/mermaid.html',
-        'pages/github-markdown.html'
+        'pages/fiddle.html',
+        'pages/pdf_viewer.html',
+        'pages/markdown.html'
     ], {base: "."})
         .pipe(replace(/.*build:common_content[^]*endbuild.*/, '        <script src="../content_scripts/common_content.min.js"></script>'))
-        .pipe(replace('sha256-nWgGskPWTedp2TpUOZNWBmUL17nlwxaRUKiNdVES5rE=', 'sha256-k6whJ99igQgqhch6A63JlRxd/4DZ7RT1fWyunKDcZ3U='))
-        .pipe(gulp.dest('dist'));
-    gulp.src('manifest.json')
-        .pipe(replace(/.*build:common_content[^]*endbuild.*/, '            "content_scripts/common_content.min.js",'))
-        .pipe(replace('sha256-nWgGskPWTedp2TpUOZNWBmUL17nlwxaRUKiNdVES5rE=', 'sha256-k6whJ99igQgqhch6A63JlRxd/4DZ7RT1fWyunKDcZ3U='))
+        .pipe(replace('sha256-nWgGskPWTedp2TpUOZNWBmUL17nlwxaRUKiNdVES5rE=', 'sha256-aGNhu6CROImp/w1iO+ovyGHEBwh6aqkO6VR1TDvzsUs='))
         .pipe(gulp.dest('dist'));
 });
 
-gulp.task('copy-js-files', ['clean'], function() {
+gulp.task('use_common_content_min_manifest', ['copy-non-js-files', 'clean'], function() {
+    return gulp.src('manifest.json')
+        .pipe(replace(/.*build:common_content[^]*endbuild.*/, '            "content_scripts/common_content.min.js",'))
+        .pipe(replace('sha256-nWgGskPWTedp2TpUOZNWBmUL17nlwxaRUKiNdVES5rE=', 'sha256-aGNhu6CROImp/w1iO+ovyGHEBwh6aqkO6VR1TDvzsUs='))
+        .pipe(gulp.dest('dist'));
+});
+
+gulp.task('copy-js-files', ['copy-es-files'], function() {
     return gulp.src([
-        'background.js',
         'content_scripts/front.js',
         'content_scripts/content_scripts.js',
         'content_scripts/top.js',
         'libs/ace/*.js',
+        'pages/pdf/*.js',
         'libs/marked.min.js',
         'libs/mermaid.min.js',
-        'libs/webfontloader.js',
-        'pages/*.js'
+        'libs/webfontloader.js'
     ], {base: "."})
     .pipe(gp_uglify().on('error', gulpUtil.log))
     .pipe(gulp.dest('dist'));
 });
 
-gulp.task('default', ['copy-pretty-default-js', 'build_common_content_min', 'use_common_content_min'], function() {
+gulp.task('copy-es-files', ['clean'], function() {
+    return gulp.src([
+        'background.js',
+        'pages/*.js'
+    ], {base: "."})
+    .pipe(babel({presets: ['es2015']}))
+    .pipe(gp_uglify().on('error', gulpUtil.log))
+    .pipe(gulp.dest('dist'));
+});
+
+gulp.task('default', ['copy-pretty-default-js', 'build_common_content_min', 'use_common_content_min', 'use_common_content_min_manifest'], function() {
     return gulp.src('dist/**')
         .pipe(zip('sk.zip'))
         .pipe(gulp.dest('dist'));

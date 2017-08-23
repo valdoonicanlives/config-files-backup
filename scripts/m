@@ -1,0 +1,218 @@
+#!/usr/bin/env bash
+#
+# Copyright (C) 2016 Arnaud VALLETTE d'OSIA
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#
+# Description:    m finds and plays your music, fast.
+#                 see help text bellow for details.
+#
+# Dependencies:
+#  - mpv          Or any player you like: mplayer?
+#  - sentaku      Downloaded at runtime on demand
+#  - youtube-dl   Optional
+#
+# Test routine:
+#  - remove index-file and sentaku
+#  - update with no search terms
+#  - search "W-A Mozart live", don't press y
+#  - search "sardou" and make a multi-selection
+
+readonly script_version_nb="2017.05.24"
+readonly music_player_exec="mpv --no-video"
+readonly forced_music_path="/media/ElementsA/shared-music/" # leave empty if m detects it correctly
+readonly m_usage_help_text="\
+
+#music_dir="/home/dka/music/shared-music/"
+-------------------------------------------------------------------------------
+   m     version: ${script_version_nb}
+
+m searches your music by file and directory names. And feeds it to your player.
+ If no music matches your search, m proposes to search with youtube-dl, see -y.
+ Depending on backend player, m also supports playlists (mpv reads .m3u files).
+
+Usage:            m [-u] [-h] [-v] [-y] [-c] [<SEARCH TERMS>]
+
+  -h, -v          Print this help text, with m version number on top. And exit.
+
+  -u, --update    Update or create a plain-text index file of your music files.
+                  File is named arnaudv6_m.idx and placed in XDG_CACHE_HOME, or
+                  by default in '$HOME/.cache/'.
+                  Music is searched in XDG_MUSIC_DIR, '\$HOME/Music' by default.
+                  Alternatively, you can force a music path by editing m.
+
+  -o              When multiple files match <SEARCH TERMS>, play first at once.
+
+  -y              force m to ignore any local match. Instead m will search with
+                  youtube-dl, download the first match to a temp file,  play it
+                  and keep the temp file for ulterior play.
+
+  -c              Clear any music downloaded by youtube-dl and kept temporarly. 
+
+  <SEARCH TERMS>  Space separated search terms. Script does not search id-tags.
+                  We are in bash: no apostrophe, quote...
+-------------------------------------------------------------------------------"
+
+# --------------------------- Don't edit from here --------------------------- #
+
+function ext_with_msg() { echo "$1"; exit; } 
+function test_bin_dep() {
+    type "$1" >/dev/null 2>&1 && return 0
+    echo >&2 "Could not find $1 executable."
+    return 1
+}
+
+# Load xdg-user-dirs (https://www.freedesktop.org/wiki/Software/xdg-user-dirs/ )
+[[ -f ${XDG_CONFIG_HOME:=~/.config}/user-dirs.dirs ]] && \
+    source ${XDG_CONFIG_HOME}/user-dirs.dirs
+
+#download_path="$(dirname $(mktemp -u))/m_cache"
+download_path="/home/dka/music/yt-dl-dir"
+music_db_file="/media/ElementsA/shared-music/m/musicdatabase.idx"
+#exclude_path=" "
+path_to_music="${XDG_MUSIC_DIR:-$HOME/Music}"
+[[ -z "${forced_music_path}" ]] || path_to_music="${forced_music_path}"
+
+# Make sure that path/to/m is in $PATH
+m_script_path=$(dirname "$0")
+[[ ":${PATH}:" == *":${m_script_path}:"* ]] || PATH="${m_script_path}:${PATH}"
+
+# If sentaku is not found, propose to download it
+test_bin_dep sentaku || {
+    url="https://raw.githubusercontent.com/rcmdnk/sentaku/master/bin/sentaku"
+    echo "rcmdnk provides sentaku under MIT license,"
+    echo -e "download it to ${m_script_path}? (y/N)"
+    read -t 10 -n 1
+    echo
+    [[ ${REPLY} =~ ^[Yy]$ ]] && {
+        wget -P "${m_script_path}" "${url}"
+        chmod +x "${m_script_path}/sentaku"
+    }
+}
+test_bin_dep sentaku || exit 1
+test_bin_dep $music_player_exec || {
+    test_bin_dep mplayer && echo 'Found mplayer: please set $player_cl.'
+    test_bin_dep mplayer2 && echo 'Found mplayer2: please set $player_cl.'
+    exit 1
+}
+
+# Parse arguments from command-line
+for var in "$@" ; do
+    if [[ "${var}" == -*  ]] ; then
+        case ${var} in
+            "-u" )       update_index_f=1 ;;
+            "--update" ) update_index_f=1 ;;
+            "-o" )       m_oneshot_mode=1 ;;
+            "-c" )       clear_yt_cache=1 ;;
+            "-y" )       search_on_ytdl=1 ;;
+            * )          ext_with_msg "${m_usage_help_text}" ;;
+        esac
+    else
+        search_terms+="${var} "
+    fi
+done
+
+# User asks to clear downloaded temp files
+[[ "${clear_yt_cache}" ]] && {
+    [[ -d "${download_path}" ]] || ext_with_msg "No cache to wipe"
+    echo -e "Delete all files in ${download_path}? (y/N)"
+    read -t 10 -n 1
+    echo
+    [[ ${REPLY} =~ ^[Yy]$ ]] || ext_with_msg "No file got deleted"
+    find "${download_path}" -type f -exec rm -f {} \;
+    ext_with_msg "Cache wiped"
+}
+
+# User asks for index file creation/refresh
+[[ "${update_index_f}" ]] && {
+    find "${path_to_music}" -mindepth 1 -printf "%P\n" | \
+    sort > "${music_db_file}"
+    echo "updated music index file"
+    [[ -z "${search_terms}" ]] && exit
+}
+
+[[ -f "${music_db_file}" ]] || \
+    ext_with_msg "no index file : create one with '-u'. Use '-h' for help"
+
+[[ "$search_on_ytdl" ]] || music_list=$(< ${music_db_file} )
+
+# is music_list less than 50 bytes ?
+[[ ${#music_list} -lt 50 ]] && \
+echo "index file seems questionnably short: if you encounter any problem,
+consider editing m to set 'forced_music_path' variable, and running 'm -u'"
+
+for var in ${search_terms} ; do
+    music_list=$( echo "${music_list}" | grep -i ${var} )
+done
+
+# If no local match, search downloaded temp files for matches
+[[ -z "${music_list}" ]] && {
+    search_on_ytdl=1
+    [[ -d "${download_path}" ]] && {
+        music_list=$( find "${download_path}" -type f )
+        for var in ${search_terms} ; do
+            music_list=$( echo "${music_list}" | grep -i ${var} )
+        done
+    }
+}
+
+# No local ar temp file matches: does user want to search youtube ?
+[[ -z "${music_list}" ]] && {
+    echo -e "No file matches. Get first youtube result? (Y/n)"
+    read -t 4 -n 1
+    echo
+    [[ ${REPLY:=y} =~ ^[Yy]$ ]] && {
+        test_bin_dep youtube-dl || exit 1
+        echo "Downloading..."
+        no_space_fn="${download_path}/${search_terms// /}"
+        youtube-dl ytsearch:"${search_terms}" -f bestaudio \
+            --max-filesize 40m -c -o "${no_space_fn}" -q
+            # youtube-dl creates download_path if need be
+        [[ -f "${no_space_fn}" ]] || ext_with_msg "Match is >40mb. Quitting."
+        music_list="${no_space_fn}"
+    }
+}
+
+# User wants to play first match at once
+[[ "$m_oneshot_mode" ]] && music_list="$( echo "${music_list}" | head -n 1 )"
+
+# can not colorize and filter results at once, for coloring changes words. Thus
+# ~$ echo "radiohead" | grep --color=always "o" | grep --color=always "radio"
+# gives no result. And grep has no AND operator: so do we colorize anly now.
+filter="^$( {
+    for var in ${search_terms} ; do
+        echo -n "|${var}" | sed 's/ *$//g'
+    done ;
+} )"
+
+music_list="$( echo "${music_list}" | grep -i --color=always -E "$filter" )"
+
+# If there are multiple matches, allow user to make a selection
+[[ "$( echo "${music_list}" | wc -l )" > 1 ]] && {
+    music_list="$( echo "${music_list}" | sentaku -N -s $'\n' )"
+    # '-E' (emacs mode) filter-as-you-type is great but pressing 'q' won't quit.
+    [[ -z "${music_list}" ]] && ext_with_msg "user interruption"
+}
+
+# make player exec an array so arguments are parsed without eval
+command_array=($music_player_exec)
+
+# press space in sentaku for multi-selection. Produced string separator is \n.
+IFS=$'\n'
+for var in ${music_list} ; do
+    # remove coloring
+    var="$( echo "${var}" | sed "s,\x1B\[[0-9;]*[a-zA-Z],,g" )"
+    [[ "$search_on_ytdl" ]] || var="${path_to_music}/${var}"
+    [[ -f "${var}" || -d "${var}" ]] && (${command_array[@]} "$var")
+done

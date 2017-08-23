@@ -2,7 +2,12 @@ var AceEditor = (function(mode, elmId) {
     $('#' + elmId).css('height', '30%');
     var self = ace.edit(elmId);
     self = $.extend(self, mode);
-    self = $.extend(self, {name: "AceEditor", eventListeners: {}, mode: 'normal'});
+    self = $.extend(self, {
+        name: "AceEditor",
+        frontendOnly: true,
+        eventListeners: {},
+        mode: 'normal'
+    });
 
     var originValue;
     function isDirty() {
@@ -26,6 +31,21 @@ var AceEditor = (function(mode, elmId) {
         };
     })();
 
+    self.exit = function(data) {
+        document.activeElement.blur();
+        mode.exit.call(self);
+        Front.hidePopup();
+        if (Front.onEditorSaved) {
+            Front.onEditorSaved(data);
+            Front.onEditorSaved = undefined;
+        } else {
+            Front.contentCommand({
+                action: 'ace_editor_saved',
+                data: data
+            });
+        }
+    };
+
     self.addEventListener('keydown', function(event) {
         event.sk_suppressed = true;
         if (Mode.isSpecialKeyOf("<Esc>", event.sk_keyName)
@@ -36,9 +56,7 @@ var AceEditor = (function(mode, elmId) {
             if (isDirty()) {
                 dialog.open('<span style="font-family: monospace">Quit anyway? Y/n </span><input type="text"/>', function(q) {
                     if (q.toLowerCase() === 'y') {
-                        document.activeElement.blur();
                         self.exit();
-                        Front.hidePopup();
                     }
                 }, {
                     bottom: true,
@@ -50,9 +68,7 @@ var AceEditor = (function(mode, elmId) {
                     }
                 });
             } else {
-                document.activeElement.blur();
                 self.exit();
-                Front.hidePopup();
             }
         }
     });
@@ -172,6 +188,11 @@ var AceEditor = (function(mode, elmId) {
         cm.on('vim-mode-change', function(data) {
             self.mode = data.mode;
         });
+        cm.on('unnamed-register-set', function(data) {
+            var lf = document.activeElement;
+            Front.writeClipboard(data.text);
+            lf.focus();
+        });
         var vim = cm.constructor.Vim;
         vimDeferred.resolve(vim);
         vim.defineEx("write", "w", function(cm, input) {
@@ -181,17 +202,13 @@ var AceEditor = (function(mode, elmId) {
             });
         });
         vim.defineEx("wq", "wq", function(cm, input) {
-            Front.contentCommand({
-                action: 'ace_editor_saved',
-                data: self._getValue()
-            });
-            Front.hidePopup();
+            self.exit(self._getValue());
             // tell vim editor that command is done
             self.state.cm.signal('vim-command-done', '')
         });
         vim.map('<CR>', ':wq', 'normal')
         vim.defineEx("quit", "q", function(cm, input) {
-            Front.hidePopup();
+            self.exit();
             self.state.cm.signal('vim-command-done', '')
         });
         AceVimMappings.forEach(function(a) {

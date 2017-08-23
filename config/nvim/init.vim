@@ -9,11 +9,19 @@ filetype plugin on
 syntax on
 " Unix as standard file type
 set ffs=unix,dos,mac
+let $NVIM_TUI_ENABLE_CURSOR_SHAPE=1
+" FOR PATHOGEN
+execute pathogen#infect()
 " =============================================================================
 " Source my separate settings files
-source /home/dka/.config/nvim/keyshortcutsandpluginsettings.vim
-source /home/dka/.config/nvim/autocmd.vim
-source /home/dka/.config/nvim/funcs.vim
+"actually putting them in the /home/dka/.config/nvim/plugin/  folder works they are automatically loaded there. Even within subfolders
+"source /home/dka/.config/nvim/keyshortcutsandpluginsettings.vim
+"source /home/dka/.config/nvim/autocmd.vim
+"source /home/dka/.config/nvim/funcs.vim
+if !has('nvim') && &ttimeoutlen == -1
+  set ttimeout
+  set ttimeoutlen=100
+endif
 "=============================================================
 set shell=/usr/bin/zsh
 " Turn on spell checking to turn off temporarily whilst using vim just type  set nospell.
@@ -53,27 +61,27 @@ function! TermEnter()
 endfunction
 map <F12> :call TermEnter()<CR>
 "--------------------------
+" Set IBeam shape in insert mode, underline shape in replace mode and block shape in normal mode.
+" working in plain urxvt terminal but not in tmux
+let &t_SI = "\<Esc>[6 q"
+let &t_SR = "\<Esc>[4 q"
+let &t_EI = "\<Esc>[2 q"
+" Try these for tmux, nope didn'twork
+"let &t_SI = "\<Esc>Ptmux;\<Esc>\<Esc>]50;CursorShape=1\x7\<Esc>\\"
+"let &t_SR = "\<Esc>Ptmux;\<Esc>\<Esc>]50;CursorShape=2\x7\<Esc>\\"
+"let &t_EI = "\<Esc>Ptmux;\<Esc>\<Esc>]50;CursorShape=0\x7\<Esc>\\"
 " }}}
-" so that you get a $ symbol when you do cw commands, not working DK
-set cpoptions+="$"
-"set cpoptions+=$
+
 "I wished they had an option that would handle the first line like they do the last, but I take what I can get.
 set display=lastline
 "-------------------------------------------
-"switch from block cursor to vertical line-cursor when going in and out of insert mode
-let &t_SI = "\<Esc>]50;CursorShape=1\x7"
-let &t_EI = "\<Esc>]50;CursorShape=0\x7"
-"make cursor red only when in terminal mode
-highlight TermCursor ctermfg=red guifg=red
-"--------------------
+
 " Time out on key codes but not mappings.
 " Basically this makes terminal Vim work sanely.
 set notimeout
 set ttimeout
 set ttimeoutlen=10
 set showmode       " If in Insert, Replace or Visual mode put a message on the last line
-
-
 "---------
 "set complete+=k    "enable dictionary completion
 
@@ -94,7 +102,8 @@ autocmd WinLeave * setlocal nocursorline
 highlight CursorLine guibg=#303000 ctermbg=234
 
 "turn blinking off for normal and visual mode
-set guicursor+=n-v-c:blinkon0
+set guicursor +=n-v-c-sm:block,i-ci-ve:ver25,r-cr-o:hor20
+"set guicursor+=n-v-c:blinkon0
 highlight Cursor guifg=#ffffff guibg=#d86020
 highlight iCursor guifg=#ffffff guibg=#AAFF00
 
@@ -113,7 +122,7 @@ set backup                  " keep a backup file
 set backupdir=~/.vim/backup " backup dir
 set noswapfile
 """""""""" VIMRC """""""""""""""""
-" au! BufWritePost .vimrc source %   " Reload vimrc when we edit it in vim and save it
+" au! BufWritePost .init.vim source %   " Reload init.vim  when we edit it in nvim and save it
 """""""""""""""""""""""""""""""""""
 " Make backspace work as usual.
 set backspace=indent,eol,start "
@@ -204,7 +213,7 @@ endfunction
 """""""""""""""""""""""""""""""""""""""""""
 "CURSOR COLOUR When in terminal
 " change the color of the cursor to white in command mode,and orange in insert mode
-if &term =~ "xterm\\|urxvt"
+if &term =~ "xterm\\|URxvt"
   :silent !echo -ne "\033]12;white\007"
   let &t_SI = "\033]12;orange\007"
   let &t_EI = "\033]12;white\007"
@@ -229,7 +238,7 @@ if has('statusline')
 set laststatus=2"
 " Format the status line
 "statusline: filepath, filetype, mod, rw, help, preview,   
-set statusline=%f\ %y\ %m%r%h%w
+set statusline=%y\ %f\ %m%r%h%w
 "statusline: separation between left and right aligned items
 set statusline+=%=
 endif
@@ -248,4 +257,6 @@ endif
 " ---------------------------
 "So that the File, Open dialog defaults to the current file's directory. 
 set browsedir=buffer
+"show the tilda sign on empty lines
+highlight EndOfBuffer ctermfg=white ctermbg=black
 

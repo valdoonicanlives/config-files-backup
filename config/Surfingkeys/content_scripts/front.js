@@ -6,7 +6,7 @@ var Front = (function() {
 
     // this object is stub of UI, it's UI consumer
     self.isProvider = function() {
-        return false;
+        return window.location.href.indexOf(chrome.extension.getURL("/pages")) === 0;
     };
 
     function frontendCommand(args, successById) {
@@ -153,26 +153,38 @@ var Front = (function() {
         });
     };
 
-    self.showKeystroke = function(key) {
+    self.showKeystroke = function(key, mode) {
         frontendCommand({
             action: 'showKeystroke',
+            mode: mode,
             key: decodeKeystroke(key)
         });
     };
 
     self.showStatus = function (pos, msg, duration) {
-        frontendCommand({
+        // don't createFrontEnd for showStatus, test on issues.xxxxxx.com
+        runtime.command({
             action: "showStatus",
             content: msg,
             duration: duration,
+            toFrontend: true,
             position: pos
         });
-    }
+    };
+    self.toggleStatus = function () {
+        runtime.command({
+            action: "toggleStatus",
+            toFrontend: true
+        });
+    };
 
     runtime.on('ace_editor_saved', function(response) {
-        onEditorSaved(response.data);
+        if (response.data !== undefined) {
+            onEditorSaved(response.data);
+        }
         if (runtime.conf.focusOnSaved && isEditable(elementBehindEditor)) {
             elementBehindEditor.focus();
+            window.focus();
             Insert.enter();
         }
     });
@@ -182,8 +194,8 @@ var Front = (function() {
         onOmniQuery(response.query);
     });
 
-    runtime.on('getFocusFromFront', function(response) {
-        document.body.focus();
+    runtime.on('getBackFocus', function(response) {
+        window.focus();
     });
 
     runtime.on('getPageText', function(response) {
@@ -207,7 +219,7 @@ var Front = (function() {
 
             Normal.exit();
             Normal.enter();
-            GetBackFocus.enter();
+            GetBackFocus.enter(0, true);
         }
     };
 

@@ -21,12 +21,44 @@ function isEditable(element) {
         || element.isContentEditable
         || (element.localName === 'input' && /^(?!button|checkbox|file|hidden|image|radio|reset|submit)/i.test(element.type));
 }
+
+function parseQueryString(query) {
+    var params = {};
+    if (query.length) {
+        var parts = query.split('&');
+        for (var i = 0, ii = parts.length; i < ii; ++i) {
+            var param = parts[i].split('=');
+            var key = param[0].toLowerCase();
+            var value = param.length > 1 ? param[1] : null;
+            params[decodeURIComponent(key)] = decodeURIComponent(value);
+        }
+    }
+    return params;
+}
+
 function reportIssue(title, description) {
     title = encodeURIComponent(title);
     description = "%23%23+Error+details%0A%0A{0}%0A%0ASurfingKeys%3A+{1}%0A%0AChrome%3A+{2}%0A%0AURL%3A+{3}%0A%0A%23%23+Context%0A%0A%2A%2APlease+replace+this+with+a+description+of+how+you+were+using+SurfingKeys.%2A%2A".format(encodeURIComponent(description), chrome.runtime.getManifest().version, encodeURIComponent(navigator.userAgent), encodeURIComponent(window.location.href));
     var error = '<h2>Uh-oh! The SurfingKeys extension encountered a bug.</h2> <p>Please click <a href="https://github.com/brookhong/Surfingkeys/issues/new?title={0}&body={1}" target=_blank>here</a> to start filing a new issue, append a description of how you were using SurfingKeys before this message appeared, then submit it.  Thanks for your help!</p>'.format(title, description);
 
     Front.showPopup(error);
+}
+
+function hasScroll(el, direction, barSize) {
+    var offset = (direction === 'y') ? ['scrollTop', 'height'] : ['scrollLeft', 'width'];
+    var result = el[offset[0]];
+
+    if (result < barSize) {
+        // set scroll offset to barSize, and verify if we can get scroll offset as barSize
+        var originOffset = el[offset[0]];
+        el[offset[0]] = el.getBoundingClientRect()[offset[1]];
+        result = el[offset[0]];
+        el[offset[0]] = originOffset;
+    }
+    return result >= barSize && (
+        el === document.body
+        || $(el).css('overflow-' + direction) === 'auto'
+        || $(el).css('overflow-' + direction) === 'scroll');
 }
 
 function isElementPartiallyInViewport(el) {
@@ -79,6 +111,10 @@ String.prototype.format = function() {
     return formatted;
 };
 
+RegExp.prototype.toJSON = function() {
+    return {source: this.source, flags: this.flags};
+};
+
 (function($) {
     $.fn.regex = function(pattern, fn, fn_a) {
         var fn = fn || $.fn.text;
@@ -100,7 +136,8 @@ String.prototype.format = function() {
         return this.filter(function(i) {
             var ret = null;
             var elm = this;
-            if ($(elm).attr('disabled') === undefined) {
+            var style = getComputedStyle(elm);
+            if ($(elm).attr('disabled') === undefined && style.visibility !== "hidden") {
                 var r = elm.getBoundingClientRect();
                 if (r.width === 0 || r.height === 0) {
                     // use the first visible child instead
@@ -221,18 +258,20 @@ String.prototype.format = function() {
                 } else {
                     character = event.key;
                     if (!character) {
-                        // keep for chrome version below 52
-                        if (event.keyIdentifier.slice(0, 2) !== "U+") {
-                            character = "{0}".format(event.keyIdentifier);
-                        } else {
-                            var keyIdentifier = event.keyIdentifier;
-                            if ((this.platform === "Windows" || this.platform === "Linux") && this.keyIdentifierCorrectionMap[keyIdentifier]) {
-                                var correctedIdentifiers = this.keyIdentifierCorrectionMap[keyIdentifier];
-                                keyIdentifier = event.shiftKey ? correctedIdentifiers[1] : correctedIdentifiers[0];
+                        if (event.keyIdentifier) {
+                            // keep for chrome version below 52
+                            if (event.keyIdentifier.slice(0, 2) !== "U+") {
+                                character = "{0}".format(event.keyIdentifier);
+                            } else {
+                                var keyIdentifier = event.keyIdentifier;
+                                if ((this.platform === "Windows" || this.platform === "Linux") && this.keyIdentifierCorrectionMap[keyIdentifier]) {
+                                    var correctedIdentifiers = this.keyIdentifierCorrectionMap[keyIdentifier];
+                                    keyIdentifier = event.shiftKey ? correctedIdentifiers[1] : correctedIdentifiers[0];
+                                }
+                                var unicodeKeyInHex = "0x" + keyIdentifier.substring(2);
+                                character = String.fromCharCode(parseInt(unicodeKeyInHex));
+                                character = event.shiftKey ? character : character.toLowerCase();
                             }
-                            var unicodeKeyInHex = "0x" + keyIdentifier.substring(2);
-                            character = String.fromCharCode(parseInt(unicodeKeyInHex));
-                            character = event.shiftKey ? character : character.toLowerCase();
                         }
                     } else {
                         if (character.charCodeAt(0) > 127   // Alt-s is ß under Mac

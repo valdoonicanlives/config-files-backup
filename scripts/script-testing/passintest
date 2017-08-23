@@ -1,0 +1,9 @@
+#!/bin/bash
+# this works
+read -p "What is the pass? " password;
+
+if [[ $password = boo ]]
+then echo "Correct!"
+else
+echo "Errr... no.  Try again."
+fi

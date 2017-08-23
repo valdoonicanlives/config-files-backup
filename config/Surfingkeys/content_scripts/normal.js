@@ -9,20 +9,24 @@ var Mode = (function() {
         return (-1 !== self.specialKeys[specialKey].indexOf(decodeKeystroke(keyToCheck)));
     };
 
+    self.postHandler = function(event) {
+        if (event.sk_stopPropagation) {
+            event.stopImmediatePropagation();
+            event.preventDefault();
+        }
+    };
+
     self.addEventListener = function(evt, handler) {
-        var mode_name = this.name;
+        var thisMode = this;
+
         this.eventListeners[evt] = function(event) {
             if (event.type === "keydown" && !event.hasOwnProperty('sk_keyName')) {
                 event.sk_keyName = KeyboardUtils.getKeyChar(event);
             }
 
-            if (!event.hasOwnProperty('sk_suppressed')) {
+            if (!event.sk_suppressed) {
                 handler(event);
-                if (event.sk_stopPropagation) {
-                    event.stopImmediatePropagation();
-                    event.preventDefault();
-                    this.stopKeyupPropagation = true;
-                }
+                thisMode.postHandler(event);
             }
         };
         if (this.name !== "Disabled" && !Disabled.eventListeners.hasOwnProperty(evt)) {
@@ -51,7 +55,7 @@ var Mode = (function() {
         });
     }
 
-    self.enter = function(priority) {
+    self.enter = function(priority, reentrant) {
         // we need clear the modes stack first to make sure eventListeners of this mode added at first.
         popModes(mode_stack);
 
@@ -63,7 +67,7 @@ var Mode = (function() {
         if (pos === -1) {
             // push this mode into stack
             mode_stack.unshift(this);
-        } else if (pos > 0) {
+        } else if (pos > 0 && !reentrant) {
             // pop up all the modes over this
             // mode_stack = mode_stack.slice(pos);
             var modeList = Mode.stack().map(function(u) { return u.name; }).join(',');
@@ -79,6 +83,31 @@ var Mode = (function() {
             // return m.name;
         // }).join('->');
         // console.log('enter {0}, {1}'.format(this.name, modes));
+
+        self.showStatus();
+    };
+
+    self.showStatus = function() {
+        if (document.hasFocus() && mode_stack.length) {
+            var cm = mode_stack[0];
+            var sl = cm.statusLine;
+            if (sl === undefined) {
+                sl = runtime.conf.showModeStatus ? cm.name :  "";
+            }
+            if (sl !== "" && window !== top) {
+                if (chrome.extension.getURL('').indexOf(window.location.origin) === 0) {
+                    if (!cm.frontendOnly) {
+                        sl += "✩";
+                    }
+                } else {
+                    var pathname = window.location.pathname.split('/');
+                    if (pathname.length) {
+                        sl += " - frame: " + pathname[pathname.length - 1]
+                    }
+                }
+            }
+            Front.showStatus(0, sl);
+        }
     };
 
     self.exit = function(peek) {
@@ -102,6 +131,7 @@ var Mode = (function() {
             // }).join('->');
             // console.log('exit {0}, {1}'.format(this.name, modes));
         }
+        self.showStatus();
     };
 
     self.stack = function() {
@@ -121,7 +151,7 @@ var Disabled = (function(mode) {
         // prevent this event to be handled by Surfingkeys' other listeners
         event.sk_suppressed = true;
         if (Mode.isSpecialKeyOf("<Alt-s>", event.sk_keyName)) {
-            Normal.toggleBlacklist(window.location.origin);
+            Normal.toggleBlacklist();
             self.exit();
             event.sk_stopPropagation = true;
         }
@@ -131,7 +161,11 @@ var Disabled = (function(mode) {
 })(Mode);
 
 var PassThrough = (function(mode) {
-    var self = $.extend({name: "PassThrough", eventListeners: {}}, mode);
+    var self = $.extend({
+        name: "PassThrough",
+        statusLine: "",
+        eventListeners: {}
+    }, mode);
 
     self.addEventListener('keydown', function(event) {
         // prevent this event to be handled by Surfingkeys' other listeners
@@ -155,8 +189,10 @@ var GetBackFocus = (function(mode) {
     });
 
     self.enter = function() {
-        mode.enter.call(self);
-        document.activeElement.blur();
+        if (runtime.conf.stealFocusOnLoad) {
+            mode.enter.apply(self, arguments);
+            document.activeElement.blur();
+        }
     };
 
     self.addEventListener('mousedown', function(event) {
@@ -166,176 +202,6 @@ var GetBackFocus = (function(mode) {
     self.addEventListener('keydown', function(event) {
         self.exit();
     });
-
-    return self;
-})(Mode);
-
-var Insert = (function(mode) {
-    var self = $.extend({name: "Insert", eventListeners: {}}, mode);
-
-    self.mappings = new Trie();
-    self.map_node = self.mappings;
-    self.mappings.add(encodeKeystroke("<Ctrl-e>"), {
-        annotation: "Move the cursor to the end of the line",
-        feature_group: 15,
-        code: function() {
-            var element = document.activeElement;
-            element.setSelectionRange(element.value.length, element.value.length);
-        }
-    });
-    self.mappings.add(encodeKeystroke("<Ctrl-f>"), {
-        annotation: "Move the cursor to the beginning of the line",
-        feature_group: 15,
-        code: function() {
-            var element = document.activeElement;
-            element.setSelectionRange(0, 0);
-        }
-    });
-    self.mappings.add(encodeKeystroke("<Ctrl-u>"), {
-        annotation: "Delete all entered characters before the cursor",
-        feature_group: 15,
-        code: function() {
-            var element = document.activeElement;
-            element.value = element.value.substr(element.selectionStart);
-            element.setSelectionRange(0, 0);
-        }
-    });
-    self.mappings.add(encodeKeystroke("<Alt-b>"), {
-        annotation: "Move the cursor Backward 1 word",
-        feature_group: 15,
-        code: function() {
-            var element = document.activeElement;
-            var pos = nextNonWord(element.value, -1, element.selectionStart);
-            element.setSelectionRange(pos, pos);
-        }
-    });
-    self.mappings.add(encodeKeystroke("<Alt-f>"), {
-        annotation: "Move the cursor Forward 1 word",
-        feature_group: 15,
-        code: function() {
-            var element = document.activeElement;
-            var pos = nextNonWord(element.value, 1, element.selectionStart);
-            element.setSelectionRange(pos, pos);
-        }
-    });
-    self.mappings.add(encodeKeystroke("<Alt-w>"), {
-        annotation: "Delete a word backwards",
-        feature_group: 15,
-        code: function() {
-            var element = document.activeElement;
-            var pos = deleteNextWord(element.value, -1, element.selectionStart);
-            element.value = pos[0];
-            element.setSelectionRange(pos[1], pos[1]);
-        }
-    });
-    self.mappings.add(encodeKeystroke("<Alt-d>"), {
-        annotation: "Delete a word forwards",
-        feature_group: 15,
-        code: function() {
-            var element = document.activeElement;
-            var pos = deleteNextWord(element.value, 1, element.selectionStart);
-            element.value = pos[0];
-            element.setSelectionRange(pos[1], pos[1]);
-        }
-    });
-    self.mappings.add(encodeKeystroke("<Esc>"), {
-        annotation: "Exit insert mode.",
-        feature_group: 15,
-        code: function() {
-            document.activeElement.blur();
-            self.exit();
-        }
-    });
-
-    self.addEventListener('keydown', function(event) {
-        // prevent this event to be handled by Surfingkeys' other listeners
-        event.sk_suppressed = true;
-        if (Mode.isSpecialKeyOf("<Esc>", event.sk_keyName)) {
-            document.activeElement.blur();
-            self.exit();
-            event.sk_stopPropagation = true;
-        } else if (!isEditable(event.target)) {
-            self.exit();
-        } else if (KeyboardUtils.keyCodes.enter === event.keyCode && event.target.localName === "input") {
-            // leave time 300ms for origin event handler of the input widget
-            setTimeout(function() {
-                if (document.activeElement === event.target) {
-                    event.target.blur();
-                }
-                self.exit();
-            }, 300);
-        } else if (event.sk_keyName.length) {
-            Normal._handleMapKey.call(self, event, function(last) {
-                // for insert mode to insert unmapped chars with preceding chars same as some mapkeys
-                // such as, to insert `,m` in case of mapkey `,,` defined.
-                var pw = last.getPrefixWord();
-                if (pw) {
-                    var elm = document.activeElement, str = elm.value, pos = elm.selectionStart;
-                    if (str !== undefined && pos !== undefined) {
-                        elm.value = str.substr(0, elm.selectionStart) + pw + str.substr(elm.selectionEnd);
-                        pos += pw.length;
-                        elm.setSelectionRange(pos, pos);
-                    } else {
-                        elm = document.getSelection();
-                        var range = elm.getRangeAt(0);
-                        var n = document.createTextNode(pw);
-                        if (elm.type === "Caret") {
-                            str = elm.focusNode.data;
-                            if (str === undefined) {
-                                range.insertNode(n);
-                                elm.setPosition(n, n.length);
-                            } else {
-                                pos = elm.focusOffset;
-                                elm.focusNode.data = str.substr(0, pos) + pw + str.substr(pos);
-                                elm.setPosition(elm.focusNode, pos + pw.length);
-                            }
-                        } else {
-                            range.deleteContents();
-                            range.insertNode(n);
-                            elm.setPosition(n, n.length);
-                        }
-                    }
-                }
-            });
-        }
-    });
-    self.addEventListener('focus', function(event) {
-        if (!isEditable(event.target)) {
-            self.exit();
-        }
-    });
-    self.addEventListener('pushState', function(event) {
-        event.sk_suppressed = true;
-    });
-
-    function nextNonWord(str, dir, cur) {
-        var nonWord = /\W/;
-        for ( cur = cur + dir; ; ) {
-            if (cur < 0) {
-                cur = 0;
-                break;
-            } else if (cur >= str.length) {
-                cur = str.length;
-                break;
-            } else if (nonWord.test(str[cur])) {
-                break;
-            } else {
-                cur = cur + dir;
-            }
-        }
-        return cur;
-    }
-
-    function deleteNextWord(str, dir, cur) {
-        var pos = nextNonWord(str, dir, cur);
-        var s = str;
-        if (pos > cur) {
-            s = str.substr(0, cur) + str.substr(pos + 1);
-        } else if (pos < cur) {
-            s = str.substr(0, pos + 1) + str.substr(cur);
-        }
-        return [s, pos];
-    }
 
     return self;
 })(Mode);
@@ -345,13 +211,14 @@ var Normal = (function(mode) {
 
     self.addEventListener('keydown', function(event) {
         if (isEditable(event.target)) {
-            Insert.enter();
-        } else if (Mode.isSpecialKeyOf("<Esc>", event.sk_keyName)) {
-            if (self.finish()) {
-                event.sk_stopPropagation = true;
+            if (Mode.isSpecialKeyOf("<Esc>", event.sk_keyName)) {
+                document.activeElement.blur();
+                Insert.exit();
+            } else {
+                Insert.enter();
             }
         } else if (Mode.isSpecialKeyOf("<Alt-s>", event.sk_keyName)) {
-            self.toggleBlacklist(window.location.origin);
+            self.toggleBlacklist();
             event.sk_stopPropagation = true;
         } else if (event.sk_keyName.length) {
             self._handleMapKey(event);
@@ -360,18 +227,17 @@ var Normal = (function(mode) {
     self.addEventListener('blur', function(event) {
         self.scrollOptions[5] = false;
     });
+    self.addEventListener('focus', function(evt) {
+        Mode.showStatus();
+    });
     self.addEventListener('keyup', function(event) {
         setTimeout(function() {
             self.scrollOptions[5] = false;
-            if (self.stopKeyupPropagation) {
-                event.stopImmediatePropagation();
-                self.stopKeyupPropagation = false;
-            }
         }, 0);
     });
     self.addEventListener('pushState', function(event) {
         Insert.exit();
-        GetBackFocus.enter();
+        GetBackFocus.enter(0, true);
     });
     self.addEventListener('mousedown', function(event) {
         if (isEditable(event.target)) {
@@ -381,30 +247,21 @@ var Normal = (function(mode) {
         }
     });
 
-    self.toggleBlacklist = function(domain) {
-        if (chrome.extension.getURL('').indexOf(domain) !== 0) {
-            // can not blacklist URLs from this extension.
-            runtime.command({
-                action: 'toggleBlacklist',
-                domain: domain
-            }, function(resp) {
-                if (checkBlackList(resp)) {
-                    Front.showBanner('Surfingkeys turned OFF for ' + domain, 3000);
-                } else {
-                    Front.showBanner('Surfingkeys turned ON for ' + domain, 3000);
-                }
-            });
-        }
+    self.toggleBlacklist = function() {
+        runtime.command({
+            action: 'toggleBlacklist',
+            blacklistPattern: (runtime.conf.blacklistPattern ? runtime.conf.blacklistPattern.toJSON() : "")
+        }, function(resp) {
+            if (resp.disabled) {
+                Front.showBanner('Surfingkeys turned OFF for ' + resp.url, 3000);
+            } else {
+                Front.showBanner('Surfingkeys turned ON for ' + resp.url, 3000);
+            }
+        });
     };
 
     self.mappings = new Trie();
     self.map_node = self.mappings;
-    self.mappings.add(encodeKeystroke("<Alt-s>"), {
-        annotation: "Toggle Surfingkeys for current site",
-        feature_group: 0,
-        code: function() {
-        }
-    });
 
     self.repeats = "";
     self.scrollOptions = ['scrollTop', 0, 0, 0, 0, false];
@@ -429,6 +286,19 @@ var Normal = (function(mode) {
                 $(document).trigger("surfingkeys:scrollDone");
             }
         };
+        if (elm === document.body) {
+            var f = elm.skScrollBy;
+            elm.skScrollBy = function(x, y) {
+                if (runtime.conf.smartPageBoundary) {
+                    if (document.body.scrollTop === 0 && y <= 0) {
+                        previousPage() && Front.showBanner("Top margin hit, jump to previous page");
+                    } else if (document.body.scrollHeight - document.body.scrollTop <= window.innerHeight && y > 0) {
+                        nextPage() && Front.showBanner("Bottom margin hit, jump to next page");
+                    }
+                }
+                f.call(elm, x, y);
+            };
+        }
         elm.smoothScrollBy = function(x, y, d) {
             if (!self.scrollOptions[5]) {
                 // scrollOptions: prop, step, duration, previousTimestamp, delta, keyHeld
@@ -461,23 +331,6 @@ var Normal = (function(mode) {
         };
     }
 
-    function hasScroll(el, direction, barSize) {
-        var offset = (direction === 'y') ? ['scrollTop', 'height'] : ['scrollLeft', 'width'];
-        var result = el[offset[0]];
-
-        if (result < barSize) {
-            // set scroll offset to barSize, and verify if we can get scroll offset as barSize
-            var originOffset = el[offset[0]];
-            el[offset[0]] = el.getBoundingClientRect()[offset[1]];
-            result = el[offset[0]];
-            el[offset[0]] = originOffset;
-        }
-        return result >= barSize && (
-            el === document.body
-            || $(el).css('overflow-' + direction) === 'auto'
-            || $(el).css('overflow-' + direction) === 'scroll');
-    }
-
     // set scrollIndex to the highest node
     function initScrollIndex() {
         if (!scrollNodes || scrollNodes.length === 0) {
@@ -486,19 +339,23 @@ var Normal = (function(mode) {
                 var maxHeight = 0;
                 scrollIndex = 0;
                 scrollNodes.forEach(function(n, i) {
-                    var h = n.getBoundingClientRect().height;
+                    var h = n.scrollHeight;
                     if (h > maxHeight) {
                         scrollIndex = i;
                         maxHeight = h
                     }
                 });
                 var sn = scrollNodes[scrollIndex];
-                sn.scrollIntoViewIfNeeded();
-                if (isElementPartiallyInViewport(sn)) {
+                if (sn === document.body) {
                     break;
                 } else {
-                    // remove the node that could not be scrolled into view.
-                    scrollNodes.splice(scrollIndex, 1);
+                    sn.scrollIntoViewIfNeeded();
+                    if (isElementPartiallyInViewport(sn)) {
+                        break;
+                    } else {
+                        // remove the node that could not be scrolled into view.
+                        scrollNodes.splice(scrollIndex, 1);
+                    }
                 }
             }
         }
@@ -518,7 +375,7 @@ var Normal = (function(mode) {
         return nodes;
     }
 
-    self.changeScrollTarget = function() {
+    self.changeScrollTarget = function(silent) {
         scrollNodes = getScrollableElements(100, 1.1);
         if (scrollNodes.length > 0) {
             scrollIndex = (scrollIndex + 1) % scrollNodes.length;
@@ -531,25 +388,35 @@ var Normal = (function(mode) {
                 sn = scrollNodes[scrollIndex];
                 sn.scrollIntoViewIfNeeded();
             }
-            var rc = sn.getBoundingClientRect();
-            Front.highlightElement({
-                duration: 200,
-                rect: {
-                    top: rc.top,
-                    left: rc.left,
-                    width: rc.width,
-                    height: rc.height
-                }
-            });
+            if (!silent) {
+                var rc = sn.getBoundingClientRect();
+                Front.highlightElement({
+                    duration: 200,
+                    rect: {
+                        top: rc.top,
+                        left: rc.left,
+                        width: rc.width,
+                        height: rc.height
+                    }
+                });
+            }
         }
+    };
+    self.resetScrollTarget = function() {
+        scrollNodes = null;
+        initScrollIndex();
     };
 
     self.scroll = function(type) {
         initScrollIndex();
-        if (scrollNodes.length === 0) {
-            return;
+        var scrollNode = document.body;
+        if (scrollNodes.length > 0) {
+            scrollNode = scrollNodes[scrollIndex];
+            if (!$(scrollNode).is(':visible')) {
+                self.changeScrollTarget(true);
+                scrollNode = scrollNodes[scrollIndex];
+            }
         }
-        var scrollNode = scrollNodes[scrollIndex];
         if (!scrollNode.skScrollBy) {
             initScroll(scrollNode);
         }
@@ -600,69 +467,73 @@ var Normal = (function(mode) {
         RUNTIME('nextFrame');
     };
 
-    self.finish = function() {
+    function _finish(mode) {
         var ret = false;
-        if (this.map_node !== this.mappings || this.pendingMap != null || this.repeats) {
-            this.map_node = this.mappings;
-            this.pendingMap = null;
+        if (mode.map_node !== mode.mappings || mode.pendingMap != null || mode.repeats) {
+            mode.map_node = mode.mappings;
+            mode.pendingMap = null;
             Front.hideKeystroke();
-            if (this.repeats) {
-                this.repeats = "";
+            if (mode.repeats) {
+                mode.repeats = "";
             }
             ret = true;
         }
         return ret;
     };
 
-    self._handleMapKey = function(event, beforeFinish) {
-        var finish = self.finish.bind(this),
+    self._handleMapKey = function(event, onNoMatched) {
+        var thisMode = this,
             key = event.sk_keyName;
-        if (this.pendingMap) {
-            if (key == "<Esc>" || key == "<Ctrl-[>") {
-                finish();
-            } else {
-                this.setLastKeys && this.setLastKeys(this.map_node.meta.word + key);
-                var pf = this.pendingMap.bind(this);
-                setTimeout(function() {
-                    pf(key);
-                    finish();
-                }, 0);
-            }
+        if (Mode.isSpecialKeyOf("<Esc>", key) && _finish(this)) {
             event.sk_stopPropagation = true;
+            event.sk_suppressed = true;
+        } else if (this.pendingMap) {
+            this.setLastKeys && this.setLastKeys(this.map_node.meta.word + key);
+            var pf = this.pendingMap.bind(this);
+            event.sk_stopPropagation = !this.map_node.meta.keepPropagation;
+            setTimeout(function() {
+                pf(key);
+                _finish(thisMode);
+                thisMode.postHandler(event);
+            }, 0);
         } else if (this.repeats !== undefined &&
             this.map_node === this.mappings && (key >= "1" || (this.repeats !== "" && key >= "0")) && key <= "9") {
             // reset only after target action executed or cancelled
             this.repeats += key;
-            Front.showKeystroke(key);
+            Front.showKeystroke(key, this.name);
             event.sk_stopPropagation = true;
         } else {
             var last = this.map_node;
             this.map_node = this.map_node.find(key);
             if (!this.map_node) {
-                beforeFinish && beforeFinish(last);
-                finish();
+                onNoMatched && onNoMatched(last);
+                event.sk_suppressed = (last !== this.mappings);
+                _finish(this);
             } else {
                 if (this.map_node.meta) {
                     var code = this.map_node.meta.code;
                     if (code.length) {
                         // bound function needs arguments
                         this.pendingMap = code;
-                        Front.showKeystroke(key);
+                        Front.showKeystroke(key, this.name);
+                        event.sk_stopPropagation = true;
                     } else {
                         this.setLastKeys && this.setLastKeys(this.map_node.meta.word);
                         RUNTIME.repeats = parseInt(this.repeats) || 1;
+                        event.sk_stopPropagation = !this.map_node.meta.keepPropagation;
                         setTimeout(function() {
                             while(RUNTIME.repeats > 0) {
                                 code();
                                 RUNTIME.repeats--;
                             }
-                            finish();
+                            _finish(thisMode);
+                            thisMode.postHandler(event);
                         }, 0);
                     }
                 } else {
-                    Front.showKeystroke(key);
+                    Front.showKeystroke(key, this.name);
+                    event.sk_stopPropagation = true;
                 }
-                event.sk_stopPropagation = true;
             }
         }
     };
@@ -693,7 +564,7 @@ var Normal = (function(mode) {
     }
 
     self.appendKeysForRepeat = function(mode, keys) {
-        if (lastKeys.length > 0) {
+        if (lastKeys && lastKeys.length > 0) {
             // keys for normal mode must be pushed.
             lastKeys.push('{0}\t{1}'.format(mode, keys));
             saveLastKeys();
@@ -710,9 +581,13 @@ var Normal = (function(mode) {
         for (var i = 0; i < modeKeys.length; i++) {
             var modeKey = modeKeys[i].split('\t');
             if (modeKey[0] === 'Hints') {
-                setTimeout(function() {
-                    Hints.feedkeys(modeKey[1]);
-                }, 120 + i*100);
+                function closureWrapper() {
+                    var hints = modeKey[1];
+                    return function() {
+                        Hints.feedkeys(hints);
+                    }
+                }
+                setTimeout(closureWrapper(), 120 + i*100);
             }
         }
     };
@@ -807,6 +682,7 @@ var Normal = (function(mode) {
             // hide borders
             var borderStyle = elm.style.borderStyle;
             elm.style.borderStyle = "none";
+            Front.toggleStatus();
 
             var dx = 0, dy = 0, sx, sy, sw, sh, ww, wh, dh = elm.scrollHeight, dw = elm.scrollWidth;
             if (elm === document.body) {
@@ -844,6 +720,7 @@ var Normal = (function(mode) {
                 if (lastScrollTop === elm.scrollTop) {
                     if (lastScrollLeft === elm.scrollLeft) {
                         // done
+                        Front.toggleStatus();
                         Front.showPopup("<img src='{0}' />".format(canvas.toDataURL( "image/png" )));
                         // restore overflow
                         elm.style.overflowY = overflowY;

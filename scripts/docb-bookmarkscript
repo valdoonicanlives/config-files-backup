@@ -1,0 +1,78 @@
+#!/bin/bash
+
+# required "surfraw"-for keyword based search,
+# you will need /usr/lib/surfraw in your path, so add below line to your .bashrc (uncommented)
+#     PATH=/usr/lib/surfraw:${PATH}
+# default script uses rofi, to use with dmenu uncomment the dmenu line and comment out the line with "rofi -dmenu"
+# place your browser in BROWSER=? line
+# only if not using w3m 
+    ## # you can use your  own bookmarks text file with 1 url entry per line, put path to it in second "BOOKMARKS=" field replacing /tmp/bookmarks, then comment out first "BOOKMARKS=" entry (line 22) and the 2  grep -o lines
+# w3m users do not need to change BOOKMARKS=?
+
+## USAGE ##
+# simply type url, matched url will be selected by dmenu/rofi
+# keywords can be used like "yt trailers", to search trailers on youtube, or "wi holocaust" to search on wikipedia, archwiki, imdb, google, aur, etc. are supported
+# when input is not url and doesn't match with bookmarks it will be searched in duckduckgo
+# if some url are not identified as url ( like goo.gl ), use ">" as a keyword
+
+BROWSER=palemoon
+# only for w3m bookmarks/ comment out if not using w3m
+#BOOKMARKS=~/.w3m/bookmark.html
+#HISTORY=~/.w3m/history
+
+# convert .w3m/bookmarks to simple text with 1 url/line; comment out if not using w3m
+#grep -o 'http[^"]*' $BOOKMARKS > /tmp/bookmarks
+# add w3m history to the list of bookmarks
+#grep -o 'http[^"]*' $HISTORY >> /tmp/bookmarks
+
+# add your plain text bookmarks here (do not edit or comment out if using w3m bookmarks)
+BOOKMARKS=~/.config/docbrokes-bookmarks
+
+# for use with rofi
+cat "$BOOKMARKS" | rofi -dmenu -location 1 -l 10 -width 100 -p $BROWSER: > /tmp/x
+# for use with dmenu
+# cat "$BOOKMARKS" | dmenu -l 10 -p $BROWSER: > /tmp/x
+
+#check=$(wc -l < /tmp/x)
+#(( $check == 0)) && exit
+[[ ! $( < /tmp/x) ]] && exit
+
+awk '{ print $1 }' /tmp/x > /tmp/y
+awk '{ print $2, $3, $4, $5, $6, $7, $8 }' /tmp/x > /tmp/z
+
+case "$( < /tmp/y )" in
+http*)  $BROWSER "$( < /tmp/x)"
+ ;;
+\>) $BROWSER "$( < /tmp/z)"
+ ;;
+*www.*) $BROWSER "$( < /tmp/x)"
+ ;;
+*.com*) $BROWSER "$( < /tmp/x)"
+ ;;
+*.in*) $BROWSER "$( < /tmp/x)"
+ ;;
+*.edu*) $BROWSER "$( < /tmp/x)"
+ ;;
+*.org*) $BROWSER "$( < /tmp/x)"
+ ;;
+aw) archwiki -browser=$BROWSER "$( < /tmp/z)"
+ ;;
+wi) wikipedia -browser=$BROWSER "$( < /tmp/z)"
+ ;;
+imdb) imdb -browser=$BROWSER "$( < /tmp/z)"
+ ;;
+aur) aur -browser=$BROWSER "$( < /tmp/z)"
+ ;;
+pkg) archpkg -browser=$BROWSER "$( < /tmp/z)"
+ ;;
+google) google -browser=$BROWSER "$( < /tmp/z)"
+ ;;
+yt) youtube -browser=$BROWSER "$( < /tmp/z)"
+ ;;
+ebay) ebay -browser=$BROWSER "$( < /tmp/z)"
+ ;;
+pubmed) pubmed -browser=$BROWSER "$( < /tmp/z)"
+ ;;
+*) duckduckgo -browser=$BROWSER "$( < /tmp/x)"
+
+esac

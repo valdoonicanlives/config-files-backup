@@ -1,0 +1,182 @@
+" Plugged: https://raw.githubusercontent.com/junegunn/vim-plug/master/plug.vim
+
+" =============================================================================
+" 1.0 Plugin manager (Plug) settings
+" =============================================================================
+"{{{
+
+" Autoinstall {{{
+if empty(glob('~/.config/nvim/autoload/plug.vim'))
+  silent !curl -fLo ~/.config/nvim/autoload/plug.vim --create-dirs
+        \ https://raw.githubusercontent.com/junegunn/vim-plug/master/plug.vim
+  autocmd VimEnter * PlugInstall
+endif
+" }}}
+call plug#begin('/home/dka/.config/nvim/plugged')
+
+" The following are examples of different formats supported.
+" Keep Plugin commands between vundle#begin/end.
+" plugin on GitHub repo
+"Plugin 'tpope/vim-fugitive'
+" plugin from http://vim-scripts.org/vim/scripts.html
+"Plugin 'L9'
+"Plugin 'vim-scripts/vimwiki'
+" Git plugin not hosted on GitHub
+"Plugin 'git://git.wincent.com/command-t.git'
+" git repos on your local machine (i.e. when working on your own plugin)
+"Plugin 'file:///home/gmarik/path/to/plugin'
+" The sparkup vim script is in a subdirectory of this repo called vim.
+" Pass the path to set the runtimepath properly.
+"Plugin 'rstacruz/sparkup', {'rtp': 'vim/'}
+" Avoid a name conflict with L9
+"Plugin 'user/L9', {'name': 'newL9'}
+"-------My plugin list DK
+" Make sure there are not gaps between ' and the plugin name' this wouldn't work as there is a gap before and
+" ======= plugins from http://vim-scripts.org/vim/scripts.html
+"Plug 'L9'
+" ======== GitHub plugins
+"fuzzy finder needs L9 library not sure anything else does
+Plug 'eparreno/vim-l9'
+Plug 'tpope/vim-surround'
+Plug 'tpope/vim-unimpaired'
+Plug 'tpope/vim-vinegar'
+Plug 'tpope/vim-eunuch'
+Plug 'tpope/vim-commentary'
+Plug 'klen/python-mode'
+Plug 'simnalamburt/vim-mundo'
+Plug 'fmoralesc/vim-pad'
+""Using CtrlP now so disabled fzf, which never installed quite right anyway
+"Plug '/usr/bin/fzf'
+"Plug 'junegunn/fzf', { 'dir': '~/.fzf', 'do': './install --all' }
+"Plug 'junegunn/fzf.vim'
+Plug 'ctrlpvim/ctrlp.vim'
+Plug 'Shougo/neomru.vim'
+"========
+" On-demand loading of plugins:
+" NERD tree will be loaded on the first invocation of NERDTreeToggle command
+Plug 'scrooloose/nerdtree', { 'on': 'NERDTreeToggle' }
+"Plug 'scrooloose/nerdtree'
+" Buffers tabline
+"#trying Lightline now, supposed to be lighter
+"  Lightline (simple status line)
+" Plug 'itchyny/lightline.vim'
+Plug 'itchyny/calendar.vim'
+"Plug 'bling/vim-bufferline'
+" vim-airline
+Plug 'vim-airline/vim-airline'
+Plug 'vim-airline/vim-airline-themes'
+"Markdown plugin
+Plug 'NBUT-Developers/extra-instant-markdown'
+Plug 'terryma/vim-multiple-cursors'
+Plug 'xolox/vim-notes'
+"The above plugin requires the vim-misc plugin too
+Plug 'xolox/vim-misc'
+Plug 'vimwiki/vimwiki'
+Plug 'machakann/vim-highlightedyank'
+" Any valid git URL is allowed, eg
+"Plug 'https://github.com/junegunn/vim-github-dashboard.git'
+" All of your Plugins must be added before the following line
+call plug#end()
+"
+"
+" Brief help
+" :PluginList       - lists configured plugins
+" :PlugInstall    - installs plugins; append `!` to update or just :PlugUpdate
+" :PluginClean      - confirms removal of unused plugins; append `!` to auto-approve removal
+" =============================================================================
+" PLUGIN SETTINGS SECTION
+" =============================================================================
+"NERDTree
+nnoremap <leader>ntr :NERDTreeToggle<CR>
+" move nerdtree to the right
+let g:NERDTreeWinPos = "right"
+" " move to the first buffer
+"autocmd VimEnter * wincmd p
+"==========
+"For Mundo  (its like gundo for vim)
+" Enable persistent undo so that undo history persists across vim sessions
+set undofile
+set undodir=/home/dka/.config/nvim/undofolder
+nnoremap <leader>1 :MundoToggle<CR>
+"===============
+" ==CtrlP ========
+let g:ctrlp_use_caching = 0
+let g:ctrlp_switch_buffer = 0
+let g:ctrlp_working_path_mode = 0
+" make it skip files inside .gitignore
+let g:ctrlp_user_command = ['.git/', 'git --git-dir=%s/.git ls-files -oc --exclude-standard']
+"use ag
+"let g:ctrlp_user_command = 'ag %s -l --nocolor -g ""'
+
+"commented out below as it searches everything for text within it and I find it unusable DK
+" To use with ripgrep
+"if executable('rg')
+""  set grepprg=rg\ --color=never
+""  let g:ctrlp_user_command = 'rg %s --files --color=never --glob ""'
+""  let g:ctrlp_use_caching = 0
+""endif
+
+"=======fzf settings=========
+""if has('nvim')
+""  let $FZF_DEFAULT_OPTS .= ' --inline-info'
+ " " let $NVIM_TUI_ENABLE_TRUE_COLOR = 1
+"endif
+"
+""if executable('fzf')
+""nnoremap <silent> <Leader><Leader> :FZF <CR>
+""nnoremap <silent> <Leader>f :FZF /home/dka/text-files-home/<CR>
+""nnoremap <leader>o :Files<cr>
+""endif
+
+"To use with neomru plugin
+""nnoremap <silent> <Leader>m :call fzf#run({
+""\   'source': 'sed "1d" $HOME/.cache/neomru/file',
+""\   'sink': 'e '
+""\ })<CR>
+"===========================
+" for highlighted yank colour
+hi HighlightedyankRegion cterm=reverse gui=reverse
+"
+"Vim-Airline plugin settings
+set laststatus=2
+let g:airline_powerline_fonts=0
+"Below line to list open buffers across the top
+let g:airline#extensions#tabline#enabled = 1
+let g:airline_theme='badwolf'
+let g:airline_left_sep = ''
+let g:airline_right_sep = ''
+let g:airline_linecolumn_prefix = '¶ '
+"let g:airline_enable_prefix = '⎇ '
+let g:airline_paste_symbol = 'ρ'
+let g:airline_section_x=""
+let g:airline_section_y="%{strlen(&ft)?&ft:'none'}"
+" -----------------------------------------------------
+
+" ----------------------
+
+
+"Vimwiki settings
+" vimwiki with markdown support, line below what gotbletu uses
+"let g:vimwiki_ext2syntax = {'.md': 'markdown', '.markdown': 'markdown', '.mdown': 'markdown'}
+" I just added 2 lines to the below to get markdown \ 'syntax': 'markdown', and \ 'ext': '.md', then when I ran it again it created a new index.md file instead of the index.wiki it was using
+let g:vimwiki_list = [{
+  \ 'path': '/home/dka/.config/vimwiki',
+  \ 'template_path': '/home/dka/.config/vimwiki/templates',
+  \ 'template_default': 'default',
+  \ 'syntax': 'markdown',
+  \ 'ext': '.md',
+  \ 'template_ext': '.html'}]
+  "Extras I have added lately DK
+  "- automatically resolve folder links as folder/index.wiki
+  let g:vimwiki_dir_link = 'index' 
+  let g:vimwiki_folding='expr'
+  nmap <Leader>wk <Plug>VimwikiIndex
+"=================
+" for extra instand markdown plugin
+let g:instant_markdown_autostart = 0
+" below keybinding to get a previiew in your browser, rather than the annoying autostart, type \md
+map <leader>md :InstantMarkdownPreview<CR>
+"==============="
+"for vim-notes
+let g:notes_directories = ['/home/dka/text-files-home', '/media/ElementsA/Dropbox/Dropbox/notes']
+" ====================================================================================

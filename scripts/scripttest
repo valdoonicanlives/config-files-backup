@@ -1,0 +1,22 @@
+#!/bin/bash
+
+#cmd () {
+#    grep -v "hello world" >> /tmp/mytest.log
+#}
+
+cmd () {
+	echo "hello there"
+}
+
+# invoce with,  cmd      # stop with ^D^D
+#OR
+# with,    some command | cmd
+# eg
+cmd
+
+#========
+
+#if [ "$food" = apple ] && [ "$drink" = tea ]; then
+ # echo "The meal is acceptable."
+#fi
+#=========

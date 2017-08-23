@@ -56,11 +56,37 @@ command('setProxy', 'setProxy <proxy_host>:<proxy_port> [proxy_type|PROXY]', fun
     return true;
 });
 command('setProxyMode', 'setProxyMode <always|direct|byhost|system|clear>', function(args) {
-    RUNTIME('updateProxy', {
+    runtime.command({
+        action: "updateProxy",
         mode: args[0]
+    }, function(rs) {
+        if (["byhost", "always"].indexOf(rs.proxyMode) !== -1) {
+            Front.showBanner("{0}: {1}".format(rs.proxyMode, rs.proxy), 3000);
+        } else {
+            Front.showBanner(rs.proxyMode, 3000);
+        }
     });
     // return true to close Omnibar for Commands, false to keep Omnibar on
     return true;
+});
+mapkey(';cp', '#13Copy proxy info', function() {
+    runtime.command({
+        action: 'getSettings',
+        key: ['proxyMode', 'proxy', 'autoproxy_hosts']
+    }, function(response) {
+        Front.writeClipboard(JSON.stringify(response.settings, null, 4));
+    });
+});
+mapkey(';ap', '#13Apply proxy info from clipboard', function() {
+    Front.getContentFromClipboard(function(response) {
+        var proxyConf = JSON.parse(response.data);
+        RUNTIME('updateProxy', {
+            host: proxyConf.autoproxy_hosts.join(","),
+            operation: 'add',
+            proxy: proxyConf.proxy,
+            mode: proxyConf.proxyMode
+        });
+    });
 });
 // create shortcuts for the command with different parameters
 map('spa', ':setProxyMode always', 0, '#13set proxy mode `always`');
@@ -168,7 +194,6 @@ mapkey('ZR', '#5Restore last session', function() {
 });
 mapkey('T', '#3Choose a tab', 'Front.chooseTab()');
 mapkey('?', '#0Show usage', 'Front.showUsage()');
-mapkey('u', '#0Show usage', 'Front.showUsage()');
 mapkey('e', '#2Scroll a page up', 'Normal.scroll("pageUp")', {repeatIgnore: true});
 mapkey('d', '#2Scroll a page down', 'Normal.scroll("pageDown")', {repeatIgnore: true});
 mapkey('j', '#2Scroll down', 'Normal.scroll("down")', {repeatIgnore: true});
@@ -180,16 +205,25 @@ mapkey('G', '#2Scroll to the bottom of the page', 'Normal.scroll("bottom")', {re
 mapkey('0', '#2Scroll all the way to the left', 'Normal.scroll("leftmost")', {repeatIgnore: true});
 mapkey('$', '#2Scroll all the way to the right', 'Normal.scroll("rightmost")', {repeatIgnore: true});
 mapkey('cs', '#2Change scroll target', 'Normal.changeScrollTarget()');
+mapkey('cS', '#2Reset scroll target', 'Normal.resetScrollTarget()');
 mapkey('f', '#1Open a link, press SHIFT to flip hints if they are overlapped.', 'Hints.create("", Hints.dispatchMouseClick)');
 mapkey('af', '#1Open a link in new tab', 'Hints.create("", Hints.dispatchMouseClick, {tabbed: true})');
 mapkey('gf', '#1Open a link in non-active new tab', 'Hints.create("", Hints.dispatchMouseClick, {tabbed: true, active: false})');
 mapkey('cf', '#1Open multiple links in a new tab', 'Hints.create("", Hints.dispatchMouseClick, {tabbed: true, active: false, multipleHits: true})');
-mapkey('<Alt-h>', '#1Mouse over elements.', 'Hints.create("", Hints.dispatchMouseClick, {mouseEvents: ["mouseover"]})');
+map('C', 'gf');
+mapkey('<Ctrl-h>', '#1Mouse over elements.', 'Hints.create("", Hints.dispatchMouseClick, {mouseEvents: ["mouseover"]})');
 mapkey('<Ctrl-j>', '#1Mouse out elements.', 'Hints.create("", Hints.dispatchMouseClick, {mouseEvents: ["mouseout"]})');
 mapkey('ya', '#7Copy a link URL to the clipboard', function() {
     Hints.create('*[href]', function(element, event) {
         Front.writeClipboard(element.href);
     })
+});
+mapkey('yma', '#7Copy multiple link URLs to the clipboard', function() {
+    Hints.linksToYank = [];
+    Hints.create('*[href]', function(element, event) {
+        Hints.linksToYank.push(element.href);
+        Front.writeClipboard(Hints.linksToYank.join('\n'));
+    }, {multipleHits: true})
 });
 mapkey('i', '#1Go to edit box', 'Hints.create("input:visible, textarea:visible, *[contenteditable=true], select:visible", Hints.dispatchMouseClick)');
 mapkey('I', '#1Go to edit box with vim editor', function() {
@@ -199,7 +233,29 @@ mapkey('I', '#1Go to edit box with vim editor', function() {
         }, element.localName);
     });
 });
+mapkey('O', '#1Open detected links from text', function() {
+    Hints.create(runtime.conf.clickablePat, function(element, event, match) {
+        $(`<a href=${match}>`)[0].click()
+    }, {statusLine: "Open detected links from text"});
+});
+mapkey(';s', 'Toggle PDF viewer from SurfingKeys', function() {
+    var pdfUrl = window.location.href;
+    if (pdfUrl.indexOf(chrome.extension.getURL("/pages/pdf_viewer.html")) === 0) {
+        pdfUrl = window.location.search.substr(3);
+        chrome.storage.local.set({"noPdfViewer": 1}, function() {
+            window.location.replace(pdfUrl);
+        });
+    } else {
+        chrome.storage.local.remove("noPdfViewer", function() {
+            window.location.replace(pdfUrl);
+        });
+    }
+});
 map('<Ctrl-i>', 'I');
+cmap('<ArrowDown>', '<Tab>');
+cmap('<ArrowUp>', '<Shift-Tab>');
+cmap('<Ctrl-n>', '<Tab>');
+cmap('<Ctrl-p>', '<Shift-Tab>');
 mapkey('q', '#1Click on an Image or a button', 'Hints.create("img, button", Hints.dispatchMouseClick)');
 mapkey('E', '#3Go one tab left', 'RUNTIME("previousTab")');
 mapkey('R', '#3Go one tab right', 'RUNTIME("nextTab")');
@@ -207,6 +263,8 @@ mapkey('<Alt-p>', '#3pin/unpin current tab', 'RUNTIME("togglePinTab")');
 mapkey('<Alt-m>', '#3mute/unmute current tab', 'RUNTIME("muteTab")');
 mapkey('B', '#4Go one tab history back', 'RUNTIME("historyTab", {backward: true})', {repeatIgnore: true});
 mapkey('F', '#4Go one tab history forward', 'RUNTIME("historyTab", {backward: false})', {repeatIgnore: true});
+mapkey('gT', '#4Go to first activated tab', 'RUNTIME("historyTab", {index: 0})', {repeatIgnore: true});
+mapkey('gt', '#4Go to last activated tab', 'RUNTIME("historyTab", {index: -1})', {repeatIgnore: true});
 mapkey('S', '#4Go back in history', 'history.go(-1)', {repeatIgnore: true});
 mapkey('D', '#4Go forward in history', 'history.go(1)', {repeatIgnore: true});
 mapkey('r', '#4Reload the page', 'RUNTIME("reloadTab", { nocache: false })');
@@ -214,6 +272,19 @@ mapkey('t', '#8Open a URL', 'Front.openOmnibar({type: "URLs", extra: "getAllSite
 mapkey('go', '#8Open a URL in current tab', 'Front.openOmnibar({type: "URLs", extra: "getAllSites", tabbed: false})');
 mapkey('ox', '#8Open recently closed URL', 'Front.openOmnibar({type: "URLs", extra: "getRecentlyClosed"})');
 mapkey('H', '#8Open opened URL in current tab', 'Front.openOmnibar({type: "URLs", extra: "getTabURLs"})');
+function renderShanbay(res) {
+    var exp = res.msg;
+    if (res.data.definition) {
+        var tmp = [];
+        for (var reg in res.data.pronunciations) {
+            tmp.push('[{0}] {1}'.format(reg, res.data.pronunciations[reg]));
+            tmp.push('<audio src="{0}" controls></audio>'.format(res.data[reg+'_audio']));
+        }
+        tmp.push(res.data.definition);
+        exp = '<pre>{0}</pre>'.format(tmp.join('\n'));
+    }
+    return exp;
+}
 mapkey('Q', '#8Open omnibar for word translation', function() {
     Front.openOmniquery({
         url: "https://api.shanbay.com/bdc/search/?word=",
@@ -227,29 +298,23 @@ mapkey('Q', '#8Open omnibar for word translation', function() {
         style: "opacity: 0.8;",
         parseResult: function(res) {
             var res = JSON.parse(res.text);
-            if (res.data.definition) {
-                var tmp = [];
-                for (var reg in res.data.pronunciations) {
-                    tmp.push('[{0}] {1}'.format(reg, res.data.pronunciations[reg]));
-                    tmp.push('<audio src="{0}" controls></audio>'.format(res.data[reg+'_audio']));
-                }
-                tmp.push(res.data.definition);
-                return [ '<pre>{0}</pre>'.format(tmp.join('\n')) ];
-            } else {
-                return [ res.msg ];
-            }
+            return [ renderShanbay(res) ];
         }
     });
 });
-//mapkey('b', '#8Open a bookmark', 'Front.openOmnibar(({type: "Bookmarks"}))');
-//mapkey('ab', '#8Bookmark current page to selected folder', function() {
-//    var page = {
-//        url: window.location.href,
-//        title: document.title
-//    };
-//    Front.openOmnibar(({type: "AddBookmark", extra: page}));
-// });
-// mapkey('oh', '#8Open URL from history', 'Front.openOmnibar({type: "History"})');
+Visual.setTranslationService("https://api.shanbay.com/bdc/search/?word=", function(res) {
+    var res = JSON.parse(res.text);
+    return renderShanbay(res);
+});
+mapkey('b', '#8Open a bookmark', 'Front.openOmnibar(({type: "Bookmarks"}))');
+mapkey('ab', '#8Bookmark current page to selected folder', function() {
+    var page = {
+        url: window.location.href,
+        title: document.title
+    };
+    Front.openOmnibar(({type: "AddBookmark", extra: page}));
+});
+mapkey('oh', '#8Open URL from history', 'Front.openOmnibar({type: "History"})');
 mapkey('om', '#8Open URL from vim-like marks', 'Front.openOmnibar({type: "VIMarks"})');
 mapkey(':', '#8Open commands', 'Front.openOmnibar({type: "Commands"})');
 command('clearHistory', 'clearHistory <find|cmd|...>', function(args) {
@@ -291,6 +356,7 @@ command('listQueueURLs', 'list URLs in queue waiting for open', function(args) {
     });
 });
 mapkey('v', '#9Toggle visual mode', 'Visual.toggle()');
+mapkey('V', '#9Restore visual mode', 'Visual.restore()');
 mapkey('/', '#9Find in current page', 'Front.openFinder()');
 mapkey('*', '#9Find selected text in current page', function() {
     Visual.star();
@@ -335,22 +401,8 @@ mapkey('cc', '#7Open selected link or link from clipboard', function() {
         });
     }
 });
-mapkey('[[', '#1Click on the previous link on current page', function() {
-    var prevLinks = $('a').regex(runtime.conf.prevLinkRegex);
-    if (prevLinks.length) {
-        clickOn(prevLinks);
-    } else {
-        walkPageUrl(-1);
-    }
-});
-mapkey(']]', '#1Click on the next link on current page', function() {
-    var nextLinks = $('a').regex(runtime.conf.nextLinkRegex);
-    if (nextLinks.length) {
-        clickOn(nextLinks);
-    } else {
-        walkPageUrl(1);
-    }
-});
+mapkey('[[', '#1Click on the previous link on current page', previousPage);
+mapkey(']]', '#1Click on the next link on current page', nextPage);
 mapkey('ys', "#7Copy current page's source", function() {
     var aa = document.documentElement.cloneNode(true);
     Front.writeClipboard(aa.outerHTML);
@@ -411,7 +463,7 @@ mapkey('yp', '#7Copy form data for POST on current page', function() {
     Front.writeClipboard(JSON.stringify(aa, null, 4));
 });
 mapkey('ob', '#8Open Search with alias b', 'Front.openOmnibar({type: "SearchEngine", extra: "b"})');
-mapkey('gs', '#8Open Search with alias g', 'Front.openOmnibar({type: "SearchEngine", extra: "g"})');
+mapkey('og', '#8Open Search with alias g', 'Front.openOmnibar({type: "SearchEngine", extra: "g"})');
 mapkey('ow', '#8Open Search with alias w', 'Front.openOmnibar({type: "SearchEngine", extra: "w"})');
 mapkey('on', '#3Open Chrome newtab', 'tabOpenLink("chrome://newtab/")');
 mapkey('ga', '#12Open Chrome About', 'tabOpenLink("chrome://help/")');
@@ -422,22 +474,36 @@ mapkey('gh', '#12Open Chrome History', 'tabOpenLink("chrome://history/")');
 mapkey('gk', '#12Open Chrome Cookies', 'tabOpenLink("chrome://settings/cookies")');
 mapkey('ge', '#12Open Chrome Extensions', 'tabOpenLink("chrome://extensions/")');
 mapkey('gn', '#12Open Chrome net-internals', 'tabOpenLink("chrome://net-internals/#proxy")');
-mapkey('ps', '#12View page source', 'RUNTIME("viewSource", { tab: { tabbed: true }})');
+mapkey('gs', '#12View page source', 'RUNTIME("viewSource", { tab: { tabbed: true }})');
 mapkey('gu', '#4Go up one path in the URL', function() {
-    var url = location.href;
-    if (location.pathname.length > 1) {
-        url = url.endsWith('/') ? url.substr(0, url.length - 1) : url;
-        url = url.substr(0, url.lastIndexOf('/'));
+    var pathname = location.pathname;
+    if (pathname.length > 1) {
+        pathname = pathname.endsWith('/') ? pathname.substr(0, pathname.length - 1) : pathname;
+        var last = pathname.lastIndexOf('/'), repeats = RUNTIME.repeats;
+        RUNTIME.repeats = 1;
+        while (repeats-- > 1) {
+            var p = pathname.lastIndexOf('/', last - 1);
+            if (p === -1) {
+                break;
+            } else {
+                last = p;
+            }
+        }
+        pathname = pathname.substr(0, last);
     }
-    window.location.href = url;
+    window.location.href = location.origin + pathname;
 });
 mapkey('g?', '#4Reload current page without query string(all parts after question mark)', function() {
     window.location.href = window.location.href.replace(/\?[^\?]*$/, '');
 });
 mapkey('gU', '#4Go to root of current URL hierarchy', 'window.location.href = window.location.origin');
+mapkey('gxt', '#3Close tab on left', 'RUNTIME("closeTabLeft")');
+mapkey('gxT', '#3Close tab on right', 'RUNTIME("closeTabRight")');
+mapkey('gx0', '#3Close all tabs on left', 'RUNTIME("closeTabsToLeft")');
+mapkey('gx$', '#3Close all tabs on right', 'RUNTIME("closeTabsToRight")');
 mapkey('se', '#11Edit Settings', 'tabOpenLink("/pages/options.html")');
 mapkey('si', '#12Open Chrome Inspect', 'tabOpenLink("chrome://inspect/#devices")');
-mapkey('sm', '#11Preview markdown', 'tabOpenLink("/pages/github-markdown.html")');
+mapkey('sm', '#11Preview markdown', 'tabOpenLink("/pages/markdown.html")');
 mapkey('<Ctrl-Alt-d>', '#11Mermaid diagram generator', 'tabOpenLink("/pages/mermaid.html")');
 mapkey('su', '#4Edit current URL with vim editor', function() {
     Front.showEditor(window.location.href, function(data) {
@@ -452,8 +518,16 @@ mapkey(';p', '#7Paste html on current page', function() {
     });
 });
 mapkey(';q', '#14Insert jquery library on current page', 'Normal.insertJS("//ajax.aspnetcdn.com/ajax/jQuery/jquery-2.1.4.min.js")');
-mapkey('gt', 'Translate selected text with google', function() {
+mapkey(';t', 'Translate selected text with google', function() {
     searchSelectedWith('https://translate.google.com/?hl=en#auto/en/', false, false, '');
+});
+mapkey(';dh', '#14Delete history older than 30 days', function() {
+    RUNTIME('deleteHistoryOlderThan', {
+        days: 30
+    });
+});
+mapkey(';db', '#14Remove bookmark for current page', function() {
+    RUNTIME('removeBookmark');
 });
 
 addSearchAliasX('g', 'google', 'https://www.google.com/search?q=', 's', 'https://www.google.com/complete/search?client=chrome-omni&gs_ri=chrome-ext&oit=1&cp=1&pgcl=7&q=', function(response) {

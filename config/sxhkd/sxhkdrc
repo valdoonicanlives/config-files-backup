@@ -5,10 +5,12 @@
 
 #Reload sxhkd
 mode_switch +u
-    killall -SIGUSR1 sxhkd
-    sxhkd -f 50 -c '/home/dka/.config/sxhkd/sxhkdrc'
+	pkill -USR1 -x sxhkd 
+#   killall -SIGUSR1 sxhkd 
+#   sxhkd -c '/home/dka/.config/sxhkd/sxhkdrc'
 # pkill -USR1 -x sxhkd -f 50 -c '/home/dka/.config/sxhkd/sxhkdrc'
 #-----------
+# LAUNCH PROGS	##########
 # below is to launch a term with fzf runnig to launch apps, just wanted to try it
 alt + c
 	~/bin/quake_fzf
@@ -21,7 +23,7 @@ alt + v
 alt + s
 	leafpad
 #	"xterm -fullscreen -fg white -bg black -fa 'Monospace' -fs 14 -e (/home/dka/bin/ranger-fm/ranger.py --cmd=fzf-locate)"
-  
+ 
 #win+s is used by i3wm so is win+shift+s
 mode_switch + y
 	~/bin/snippy
@@ -59,7 +61,13 @@ mode_switch + 5
 	pragha
 #changed below from just google-chrome-beta to put cache in tmp
 mode_switch + i
-	chromium --disk-cache-dir=/tmp/cache
+	palemoon
+#	/home/dka/bin/start-chromium 
+#	chromium --disk-cache-dir=/tmp/cache
+#mode_switch + h	
+#	ccrypt --decrypt --key kered00 /home/dka/my-home-page/pj.html.cpt
+control + e
+	ccrypt --encrypt --key kered00 /home/dka/my-home-page/pj.html 
 #space + @w
 #    chromium --disk-cache-dir=/tmp/cache http://www.buienradar.nl/weer/huizen/nl/2753468/3uurs
 mode_switch + e
@@ -82,10 +90,13 @@ mode_switch + o
 #super + Alt + d
 #	xdg-open ~/Downloads
   
-mode_switch + h
-        xfe
+#mode_switch + h
+#       xfe
 #super + w
 #	skippy-xd
+alt + y
+	/home/dka/bin/clipmenu
+# cd /home/dka/bin && sh -c "CM_LAUNCHER=rofi clipmenu" not working
 alt + f
     /home/dka/bin/rofi-bangs
 #rofi -show run

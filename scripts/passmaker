@@ -1,0 +1,17 @@
+#!/bin/bash  
+# you give it a key like say mybanypass and it creates a pass that will alwayse be the same
+# so if you wanted to use it for username too you would give it two keys one called mybankpassuser
+unset input;  
+read -s -p "Key please.." input;  
+echo;  
+if [ -z "$input" ]; then echo "There's no key.. Bye."; exit; fi  
+#PLEASE CHANGE THE SALT!  
+salt=SALTYsaltySALTtheraininSpainfallsmainlyontheplainYeahyouknowit
+key=$input$salt  
+hash=$(echo -n $key | openssl dgst -whirlpool -binary | base64 -w0)  
+spec=$(echo -n $hash | xxd -ps -u | tr 1234567890ABCDEF \@\$\#\$\-\^\&\_\_\#\&\-\=\_\$\_ | head -c 4)  
+echo -n $spec$hash | head -c 18 | fold -w1 | shuf --random-source=<(openssl enc -aes-256-ctr -pass pass:"$salt" -nosalt </dev/zero 2>/dev/null) | tr -d '\n' | xclip -selection c  
+echo Copied..;  
+unset input;  
+sleep 10;  
+echo 1 | xclip -selection c  

@@ -155,7 +155,7 @@ hi PmenuThumb       ctermfg=252       ctermbg=0
 hi SignColumn       ctermfg=252       ctermbg=0
 endif
 
-" General colors
+" General colors  These are Terminal colours most of above guibg etc are for gvim DK
 " ━━━━━━━━━━━━━━
 hi Cursor           ctermbg=241
 hi Normal           ctermfg=15        ctermbg=0

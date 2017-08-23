@@ -1,0 +1,15 @@
+#!/bin/sh
+# place weather, date and time in dwm status bar.
+# for laptops, add apm data to status bar.
+#
+# pipe through dwm to terminate when dwm exits:
+#
+#    $HOME/bin/status | /usr/local/bin/dwm >[2]$HOME/dwm.log
+#
+#color="#6FD5DE"
+
+
+while true; do
+	xsetroot -fg Gold -name  "$(date +"%a %b %d %I:%M")"
+	sleep 4
+done

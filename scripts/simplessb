@@ -1,0 +1,123 @@
+#!/bin/bash
+# simple-ssb - a simple Site Specific Browser application
+# 2014, 2017 Corey Mwamba
+# requirements: Yad/Zenity, WebKitGTK+2, cURL, gjs
+# If you need Flash then download the NPAPI Flash plugin
+vcheck(){
+hash gjs 2>/dev/null || { echo >&2 $(${GUICMD} --text "gjs is not installed"); exit 1; }
+hash curl 2>/dev/null || { echo >&2 $(${GUICMD} --text "curl is not installed"); exit 1; }
+}
+join_strings() { 
+	 local d=$1; shift; echo -n "$1"; shift; printf "%s" "${@/#/$d}";
+	}
+
+generate_gui() {
+DTCATS=( "AudioVideo" "Audio" "Video" "Development" "Education" "Game" "Graphics" "Network" "Office" "Science" "Settings" "System" "Utility" )
+
+if hash yad 2>/dev/null ; then
+	GUICMD=yad 
+elif hash zenity 2>/dev/null ; then
+	GUICMD=zenity
+else
+    echo "you will need either YAD or Zenity"; exit 1
+fi
+vcheck
+}
+
+add_ssb() {
+generate_gui
+case $GUICMD in
+zenity)
+categories=$(join_strings '|' ${DTCATS[@]})
+desk=$(zenity --title="simple-ssb" --text="Set Site, Name and Description" --forms --add-entry="URL" --add-entry="Name"  --add-combo="Category" --combo-values="${categories}") || exit 1 
+;;
+yad)
+categories=$(join_strings '!' ${DTCATS[@]})
+desk=$(yad --title="simple-ssb" --text="Set Site, Name and Description" --form --field="URL" --field="Name"  --field="Category:CBE" '' '' ${categories} ) || exit 1
+;;
+esac
+eval $(echo $desk | awk -F'|' '{printf "export URL=\"%s\" NAME=\"%s\" CATEGORY=\"%s\"", $1, $2, $3}')
+mkdir -p  $HOME/.local/share/ssb/$NAME
+curl -s http://www.google.co.uk/s2/favicons?domain=$URL > $HOME/.local/share/ssb/$NAME/favicon.png
+IMG="$HOME/.local/share/ssb/$NAME/favicon.png"
+cat > $HOME/.local/share/applications/$NAME.desktop <<EOF
+[Desktop Entry]
+Type=Application
+Name=$NAME
+Icon=$IMG
+Exec=simple-ssb -r $NAME
+Categories=$CATEGORY;
+Terminal=false
+EOF
+
+cat > $HOME/.local/share/ssb/$NAME/run <<EOF
+#!/usr/bin/gjs
+const Gtk = imports.gi.Gtk;
+const WebKit = imports.gi.WebKit2;
+Gtk.init(null, 0);
+var win = new Gtk.Window({type: Gtk.WindowType.TOPLEVEL, title: "$NAME"});
+win.set_icon_from_file("$IMG")
+win.set_default_size(400, 600);
+var context = new WebKit.WebContext();
+var cookies = context.get_cookie_manager();
+cookies.set_accept_policy(0);
+cookies.set_persistent_storage("$HOME/.local/share/ssb/$NAME/cookies.txt",0);
+var view = WebKit.WebView.new_with_context(context);
+view.load_uri("$URL");
+win.add(view);
+win.connect("destroy", function (window) {Gtk.main_quit();});
+win.show_all();
+Gtk.main();
+EOF
+
+update-desktop-database -q $HOME/.local/share/applications/
+exit 0
+}
+show_help(){
+cat <<'HelpText123'
+simple-ssb: site-specific browser application.
+-a		add site
+-r NAME  	Load site with NAME
+-l			List NAMEs
+-d NAME		Delete ssb by name
+-h		show this help
+HelpText123
+}
+case $1 in
+-h)
+show_help
+;;
+
+-a)
+add_ssb
+;;
+
+-l)
+if [[ -s $HOME/.local/share/ssb/ ]]; then
+ls -1 $HOME/.local/share/ssb/
+else 
+echo "No SSBs set."
+fi
+;;
+
+-r)
+generate_gui
+if [ -n "$2" ]; then
+	gjs $HOME/.local/share/ssb/$2/run || echo >&2 $(${GUICMD} --text "no entry for site; add it with ssb -a"); exit 1;
+else
+	echo >&2 $(${GUICMD} --text "No site name suggested"); exit 1;
+fi
+;;
+
+-d)
+generate_gui
+if [ -n "$2" ]; then
+	rm -r $HOME/.local/share/ssb/$2
+	rm $HOME/.local/share/applications/$2.desktop
+	update-desktop-database -q $HOME/.local/share/applications/
+	echo >&2 $(${GUICMD} --text "$2 deleted")
+else
+	echo >&2 $(${GUICMD} --text "No site name suggested"); exit 1;
+fi
+;;
+esac

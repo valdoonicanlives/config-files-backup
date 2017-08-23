@@ -1,0 +1,11 @@
+#!/bin/bash
+name=bob
+if [[ $name = "George" ]]
+then echo "Bonjour, $name"
+elif [[ $name = "Hans" ]]
+then echo "Goeie dag, $name"
+elif [[ $name = "Jack" ]]
+ then echo "Good day, $name"
+else
+echo "You're not George, Hans or Jack.  Who the hell are you, $name?"
+fi

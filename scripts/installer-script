@@ -1,0 +1,30 @@
+#!/bin/sh
+# Install everything I need!
+
+# Packages for the new installation
+pkgs=(artwiz-fonts compton dmenu git herbstluftwm htop
+lxappearance nitrogen pulseaudio pulseaudio-alsa pavucontrol
+qutebrowser ranger rtorrent termite maim spacefm unzip p7zip
+youtube-dl weechat wget xorg-server xorg-xfontsel xorg-xinit
+xf86-video-intel zip zsh terminus-font deadbeef mpd
+ncmpcpp mpc vim gtk-engine-murrine adwaita-icon-theme gimp
+w3m connman wpa_supplicant iw xorg-xmodmap xorg-setxkbmap
+redshift sxhkd xorg-xsetroot xorg-xset rxvt-unicode
+urxvt-perls mpv ttf-freefont slop udisks2 syslinux
+ttf-symbola)
+
+# You know the thing
+sudo pacman -Syu $pkgs
+
+# Expects that you have cower installed
+#bashmount siji-git xbanish-git toilet-git
+#cower -dd $aur
+
+# Clone dot files from github and move them
+#git clone https://github.com/Shinryuu/dotfiles && cd
+#.dotfiles && cp -rv .* ~/
+
+# Print something useful
+echo
+echo "...install complete, have fun!"
+echo

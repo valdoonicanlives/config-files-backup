@@ -31,6 +31,9 @@ Surfingkeys的配置全部写在一段javascript中，很容易添加自己的�
 * [VIM编辑器](#vim编辑器)
 * [点命令重复前一个操作](#点命令重复前一个操作)
 * [Markdown预览](#markdown预览)
+* [截屏](#截屏)
+* [mermaid图形生成器](#mermaid图形生成器)
+* [PDF阅读器](#pdf阅读器)
 * [配置参考](#配置参考)
 * [编译](#编译)
 * [License](#license)
@@ -49,6 +52,10 @@ Surfingkeys的配置全部写在一段javascript中，很容易添加自己的�
 * 使用VIM编辑页面上各种输入框
 * 点命令重复前一个操作
 * `sm`预览markdown
+* `<Ctrl-Alt-d>`打开图形生成器
+* 插入模式下的表情下拉选项
+* 按键实时提示
+* 所有按键对PDF适用
 
 ## 快速上手
 安装本插件以后，打开你要访问的站点。先按`?`或者`u`看看帮助信息，按`Esc`可以关掉帮助信息。
@@ -132,9 +139,31 @@ Surfingkeys有三种模式：normal，visual和insert。
     imap(';;', "<Ctrl-'>");     // 按两次分号切换双引号。
 
 
+#### 表情下拉选项
+
+当用户在插入模式下输入一个冒号跟着两个字符（2是通过`settings.startToShowEmoji`设置的）时，如`:gr`，Surfingkeys会列出相应的表情。
+
+![emoji](https://cloud.githubusercontent.com/assets/288207/23602453/924ed762-028b-11e7-86f3-bf315c0a2499.gif)
+
+如果你不喜欢这个功能，可以用以下设置禁用：
+
+    iunmap(":");
+
+如果你希望按下冒号后立刻出现表情下拉选项，可以用以下设置：
+
+    settings.startToShowEmoji = 0;
+
+[表情符号完整列表](https://github.com/brookhong/Surfingkeys/blob/master/pages/emoji.tsv)
+
 ### 查找
 
 查找不是模式，但是它会让你自动进入visual mode. 按`/`打开查找栏，输入你要查找的文字，你会看到所有匹配的文字会被高亮。按回车完成查找，这时你会自动进入visual mode -- `Caret`。按`n`定位下一个，`N`定位前一个。
+
+### 按键测试
+
+`spk`可以打开按键测试模式。
+
+在这个辅助模式下，你每按下一按键，Surfingkeys按显示出来，便于你确定mapkey的第一个参数。
 
 ## 搜索栏
 
@@ -151,6 +180,9 @@ Surfingkeys有三种模式：normal，visual和insert。
 * `Shift-Enter` 在当前标签页打开选中项并关闭搜索栏。如果你希望默认就在当前标签页打开，可以使用`go`。
 * `Tab` 在结果列表中向下切换。
 * `Shift-Tab` 在结果列表中向上切换。
+* `Ctrl-.` 显示下一页搜索结果
+* `Ctrl-,` 显示上一页搜索结果
+* `Ctrl-c` 复制当前列出的结果
 
 用`t`打开搜索栏时，
 
@@ -161,6 +193,11 @@ Surfingkeys有三种模式：normal，visual和insert。
 `Ctrl - Shift - <any letter>` 创建相应的类似vim的全局标示。
 
 ![search_engine](https://cloud.githubusercontent.com/assets/288207/17644214/759ef1d4-61b3-11e6-9bd9-70c38c8b80e0.gif)
+
+`cmap`用于搜索栏修改按键，如：
+
+    cmap('<Ctrl-n>', '<Tab>');
+    cmap('<Ctrl-p>', '<Shift-Tab>');
 
 ## 搜索选中文本
 
@@ -198,7 +235,7 @@ search_leader_key(`s`)加上大写的别名(`G`)会打开搜索框让你可以�
 
 如果你希望一直用搜索栏来选择标签页，可使用如下设置:
 
-    mapkey(' ', 'Choose a tab with omnibar', 'Front.openOmnibar(OpenTabs)');
+    mapkey('<Space>', 'Choose a tab with omnibar', 'Front.openOmnibar({type: "Tabs"})');
 
 效果相当于：
 
@@ -218,7 +255,7 @@ search_leader_key(`s`)加上大写的别名(`G`)会打开搜索框让你可以�
 
 例如，
 
-    command('setProxyMode', 'setProxyMode <always|direct|byhost>', function(args) {
+    command('setProxyMode', 'setProxyMode <always|direct|byhost|system|clear>', function(args) {
         // args is an array of arguments
         RUNTIME('updateProxy', {
             mode: args[0]
@@ -317,11 +354,13 @@ SwitchySharp是个很好的代理管理插件，但我的用法很简单，
         setProxy 192.168.1.100:8080
         setProxy 127.0.0.1:1080 SOCKS5
 
-* setProxyMode, 设置代理模式，有三种模式：direct, byhost, always
+* setProxyMode, 设置代理模式，有五种模式：direct, byhost, always, system 和 clear。
 
         direct      Chrome不使用代理访问任何网站。
-        byhost      Chrome只在访问你通过下面的命令添加的网站时使用代理。
+        byhost      Chrome只在访问你通过`addProxySite`命令添加过的网站时使用代理。
         always      Chrome使用代理访问所有网站。
+        system      Chrome使用操作系统设置的代理。
+        clear       Surfingkeys不管代理，有其他插件管理，也就是禁用Surfingkeys的代理管理功能, 这是默认模式。
 
 * addProxySite, removeProxySite, toggleProxySite, 管理你需要通过代理访问的网站，比如：
 
@@ -335,7 +374,11 @@ SwitchySharp是个很好的代理管理插件，但我的用法很简单，
 
 * `spb`, `:setProxyMode byhost`快捷键。
 
+* `spc`, `:setProxyMode clear`快捷键。
+
 * `spd`, `:setProxyMode direct`快捷键。
+
+* `sps`, `:setProxyMode system`快捷键。
 
 * `spi`, `:proxyInfo`快捷键。
 
@@ -407,6 +450,25 @@ Surfingkeys默认使用[这个markdown分析器](https://github.com/chjj/marked)
 
     settings.useLocalMarkdownAPI = false;
 
+## 截屏
+
+* `yg` 截当前页的屏。
+* `yG` 滚动截完整页。
+* `yS` 截当前滚动对象的屏。
+
+## mermaid图形生成器
+
+[Mermaid](https://github.com/knsv/mermaid) 是一个从文本生成各类图形如类图／时序图的工具。Surfingkeys提供了一个页面，可以从系统剪贴板里读取文本并生成图形，并可以用vim编辑器编辑。
+
+按`Ctrl-Alt-d`打开。
+
+## PDF阅读器
+为了支持PDF文件，Surfingkeys集成了来自[pdf.js](https://github.com/mozilla/pdf.js)的PDF阅读器。当你用Chrome打开一个PDF文件时，这个PDF阅读器就会打开，这样所有Surfingkeys的按键都可以用了。
+
+如果希望使用Chrome默认的PDF阅读器打开，可以按`;s`切换。
+
+当你使用Chrome默认PDF阅读器时，有些按键还是可用的，但部分按键比如滚动／可视模式下的按键就不可用了。
+
 ## 配置参考
 
 ### 添加一个按键映射
@@ -437,6 +499,10 @@ Surfingkeys默认使用[这个markdown分析器](https://github.com/chjj/marked)
 
     imap(new_keystroke, old_keystroke, [domain_pattern], [new_annotation])
 
+    vmap(new_keystroke, old_keystroke, [domain_pattern], [new_annotation])
+
+    cmap(new_keystroke, old_keystroke, [domain_pattern], [new_annotation])
+
 | 参数  | 含义 |
 |:---------------| :-----|
 |**new_keystroke**               | 字符串，将要使用的按键。|
@@ -449,6 +515,8 @@ Surfingkeys默认使用[这个markdown分析器](https://github.com/chjj/marked)
     unmap(keystroke, [domain_pattern])
 
     iunmap(keystroke, [domain_pattern])
+
+    vunmap(keystroke, [domain_pattern])
 
 | 参数  | 含义 |
 |:---------------| :-----|
@@ -497,10 +565,65 @@ Surfingkeys默认使用[这个markdown分析器](https://github.com/chjj/marked)
     mapkey('os', 'Search Selected with stackoverflow',  'searchSelectedWith("http://stackoverflow.com/search?q=")');
     vmapkey('os', 'Search Selected with stackoverflow',  'searchSelectedWith("http://stackoverflow.com/search?q=")');
 
+### 删除搜索别名及相关绑定
+
+    removeSearchAliasX(alias, search_leader_key, only_this_site_key);
+
 ### 搜索栏辅助函数
 
     Omnibar.listWords(<array of words>)
     Omnibar.html(<any html snippets>)
+
+### 修改内嵌vim编辑器里的按键
+
+    aceVimMap(lhs, rhs, ctx)
+
+例如，
+
+    aceVimMap('jk', '<Esc>', 'insert');
+
+### 属性设置列表
+
+| 属性 | 默认值 | 解释 |
+|:---------------|:-----|:-----|
+| Hints.characters | "asdfgqwertzxcvb" | 可用于生成拨号盘的字符。 |
+| Hints.scrollKeys | "0jkhlG$" | 在拨号模式下可用于滚屏的按键，你通常不需要修改，除非你改了`Hints.characters`. |
+| settings.showModeStatus | false | 是否在状态栏显示当前模式。 |
+| settings.showProxyInStatusBar | false | 是否在状态栏显示代理信息。 |
+| settings.richHintsForKeystroke | true | 是否启用实时按键提示。 |
+| settings.useLocalMarkdownAPI |  true | 是否使用[chjj/marked](https://github.com/chjj/marked)解析markdown，否则使用github API。 |
+| settings.focusOnSaved | true | 是否在退出内嵌VIM编辑器后把光标定位到输入框。 |
+| settings.omnibarMaxResults | 10 | 搜索栏下面每页显示多少条结果。 |
+| settings.tabsThreshold | 9 | 当打开标签页的数量超过设定值时，使用搜索栏来查找标签页。 |
+| settings.hintsThreshold | 10000 | 当普通的可点击元素(a, button, select, input, textarea)数量超过设定值时，Surfingkeys就不会为其它可点击的元素显示拨号键了。 |
+| settings.clickableSelector | "" | 自定义CSS selector用于f键选择无法检测到的可点击元素，例如"\*.jfk-button, \*.goog-flat-menu-button"。 |
+| settings.clickablePat | /(https?&#124;thunder&#124;magnet):\/\/\S+/ig | 用于检测文字中可点击链接的正则表达式，你可以按`O`打开检测到的链接。|
+| settings.smoothScroll | true | 是否启用顺滑滚动。 |
+| settings.modeAfterYank | "" | 在可视模式下，在复制文本之后，回到哪种模式，["", "Caret", "Normal"]，默认是""，指保持当前模式。 |
+| settings.scrollStepSize | 70 | `j`/`k`滚动时每一步的大小。 |
+| settings.nextLinkRegex | /((>>&#124;next)+)/i | 匹配下一页链接的正则表达式。 |
+| settings.prevLinkRegex | /((<<&#124;prev(ious)?)+)/i| 匹配上一页链接的正则表达式。 |
+| settings.hintAlign | "center" | 拨号键与它对应的目标如何对齐。["left", "center", "right"] |
+| settings.defaultSearchEngine | "g" | 搜索栏里的默认搜索引擎。 |
+| settings.blacklistPattern | undefined | 如果当前访问的网站匹配设定的正则表达式，则禁用Surfingkeys。 |
+| settings.focusAfterClosed | "right" | 关掉当前标签页后，切换到哪一侧的标签页。["left", "right"] |
+| settings.repeatThreshold | 99 | 操作可重复最多次数。 |
+| settings.tabsMRUOrder | true | 查找打开标签页时，是否按最近访问顺序列出所有标签页。 |
+| settings.historyMUOrder | true | 查找访问记录时，是否按最常访问顺序列出所有访问记录。 |
+| settings.newTabPosition | 'default' | 在哪个位置创建新标签页。["left", "right", "first", "default"] |
+| settings.interceptedErrors | [] | 指明Surfingkeys为哪些错误显示错误页，这样在这些错误页你依然可以使用Surfingkeys。例如，["*"]为所有错误显示错误页，["net::ERR_NAME_NOT_RESOLVED"]只为ERR_NAME_NOT_RESOLVED显示错误页。更多错误请参考[net_error_list.h](https://github.com/adobe/chromium/blob/master/net/base/net_error_list.h)。  |
+| settings.startToShowEmoji | 2 | 在冒号后输入多少个字符才显示表情下拉选项。 |
+| settings.language | undefined | 帮助中使用何种语言，目前只支持中英文，设为"zh-CN"显示中文帮助。 |
+| settings.stealFocusOnLoad | true | 是否阻止光标定位到输入框，默认为true，这样我们可以在页面加载结束之后直接使用Surfingkeys提供的各类按键，否则需要按Esc退出输入框。 |
+| settings.theme | undefined | 修改Surfingkeys界面风格。 |
+
+### settings.theme示例，修改状态栏字体
+
+    settings.theme = `
+        #sk_status, #sk_find {
+            font-size: 20pt;
+        }
+    }`;
 
 ## 编译
 
@@ -513,6 +636,7 @@ Surfingkeys默认使用[这个markdown分析器](https://github.com/chjj/marked)
 * [TRIE](https://github.com/mikedeboer/trie)
 * [ACE vim editor](https://github.com/ajaxorg/ace)
 * [markdown parser](https://github.com/chjj/marked)
+* [pdf.js](https://github.com/mozilla/pdf.js)
 * [vimium](https://github.com/philc/vimium)
 * [cVim](https://github.com/1995eaton/chromium-vim)
 
