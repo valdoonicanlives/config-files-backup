@@ -49,30 +49,3 @@ if (( ${+terminfo[smkx]} )) && (( ${+terminfo[rmkx]} )); then
 	zle -N zle-line-init
 	zle -N zle-line-finish
 fi
-
-# one below you press Ctrl g and it pushes new files to git for you, doing most of th steps, you justhave to add a comment
-# git   not working DK
-	function git_prepare() {
-		if [ -n "$BUFFER" ];
-			then
-				BUFFER="git add -A; git commit -m \"$BUFFER\" && git push"
-		fi
-
-		if [ -z "$BUFFER" ];
-			then
-				BUFFER="git add -A; git commit -v && git push"
-		fi
-				
-		zle accept-line
-	}
-	zle -N git_prepare
-	bindkey "^g" git_prepare
-	
-	# belwo to press Ctrl k to go up a dir
-	# up
-	function up_widget() {
-		BUFFER="cd .."
-		zle accept-line
-	}
-	zle -N up_widget
-	bindkey "^k" up_widget

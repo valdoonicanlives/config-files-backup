@@ -1,0 +1,4 @@
+This folder copied from
+/usr/lib/
+intalled by archlabs
+it is used by the scirpt pacli, which I copied to my .scripts folder and had to rename pacmancli

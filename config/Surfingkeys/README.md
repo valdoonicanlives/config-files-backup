@@ -31,7 +31,6 @@ Surfingkeys is created with all settings described in Javascript, so it's easy f
 * [Markdown preview](#markdown-preview)
 * [Capture page](#capture-page)
 * [Mermaid diagram generator](#mermaid-diagram-generator)
-* [PDF viewer](#pdf-viewer)
 * [Edit your own settings](#edit-your-own-settings)
 * [Build](#build)
 * [License](#license)
@@ -50,10 +49,6 @@ Surfingkeys is created with all settings described in Javascript, so it's easy f
 * Use vim editor to edit input on page
 * Dot to repeat previous action
 * `sm` to preview markdown
-* `<Ctrl-Alt-d>` to open diagram tool
-* Emoji completion in insert mode
-* Rich hints for keystroke
-* Everything in Surfingkeys works for PDF
 
 ## Quick start
 
@@ -140,22 +135,6 @@ All mappings added with `imapkey` work in this mode.
     imap(',,', "<Esc>");        // press comma twice to leave current input box.
     imap(';;', "<Ctrl-'>");     // press semicolon twice to toggle quote.
 
-#### Emoji completion
-
-When user inputs a colon and 2(set by `settings.startToShowEmoji`) characters such as `:gr` in insert mode, Surfingkeys will try to find matched emoji, and list them out if there are some found.
-
-![emoji](https://cloud.githubusercontent.com/assets/288207/23602453/924ed762-028b-11e7-86f3-bf315c0a2499.gif)
-
-If you want this feature disabled completely, use below settings:
-
-    iunmap(":");
-
-If you'd like emoji suggestions popup as soon as you input colon, use below:
-
-    settings.startToShowEmoji = 0;
-
-[Complete list of Emoji](https://github.com/brookhong/Surfingkeys/blob/master/pages/emoji.tsv)
-
 ### Find
 
 `Find` is not actually a mode, it just another way to enter visual mode. Press `/` to open find bar, which sits at almost the same position with Mode indicator, type something there. All occurrences of your input will be highlighted. Press `Enter` to finish the finding, and you're in `Caret` visual mode now, press `n` to find next, `N` to find previous.
@@ -181,9 +160,6 @@ The omnibar provides kinds of functions that need user input, for example,
 * `Shift-Enter` to open selected item in current tab and close omnibar. If you'd like to open in current tab by default, please use `go`.
 * `Tab` to forward cycle through the candidates.
 * `Shift-Tab` to backward cycle through the candidates.
-* `Ctrl-.` to show results of next page
-* `Ctrl-,` to show results of previous page
-* `Ctrl-c` to copy all listed items
 
 In omnibar opened with `t`:
 
@@ -194,11 +170,6 @@ In omnibar opened with `b`:
 `Ctrl - Shift - <any letter>` to create vim-like global mark
 
 ![search_engine](https://cloud.githubusercontent.com/assets/288207/17644214/759ef1d4-61b3-11e6-9bd9-70c38c8b80e0.gif)
-
-`cmap` could be used for Omnibar to change mappings, for example:
-
-    cmap('<Ctrl-n>', '<Tab>');
-    cmap('<Ctrl-p>', '<Shift-Tab>');
 
 ## Search selected with
 
@@ -236,7 +207,7 @@ There is `settings.tabsThreshold` here. When total of opened tabs exceeds `setti
 
 If you prefer to use omnibar always, use below mapping:
 
-    mapkey('<Space>', 'Choose a tab with omnibar', 'Front.openOmnibar({type: "Tabs"})');
+    mapkey(' ', 'Choose a tab with omnibar', 'Front.openOmnibar(OpenTabs)');
 
 which works same as:
 
@@ -256,7 +227,7 @@ The tabs are displayed in MRU order by default, either in omnibar or overlay. If
 
 For example,
 
-    command('setProxyMode', 'setProxyMode <always|direct|byhost|system|clear>', function(args) {
+    command('setProxyMode', 'setProxyMode <always|direct|byhost>', function(args) {
         // args is an array of arguments
         RUNTIME('updateProxy', {
             mode: args[0]
@@ -355,7 +326,7 @@ To avoid manually editing PAC script and reloading/switching profile by clicking
         setProxy 192.168.1.100:8080
         setProxy 127.0.0.1:1080 SOCKS5
 
-* setProxyMode, to set proxy mode, there are five modes: direct, byhost, always, system and clear.
+* setProxyMode, to set proxy mode, there are three modes: direct, byhost, always
 
         direct      Chrome will connect to all sites directly.
         byhost      Chrome will only connect to sites added by `addProxySite` through proxy.
@@ -375,11 +346,7 @@ To avoid manually editing PAC script and reloading/switching profile by clicking
 
 * `spb`, shortcut for `:setProxyMode byhost`
 
-* `spc`, shortcut for `:setProxyMode clear`
-
 * `spd`, shortcut for `:setProxyMode direct`
-
-* `sps`, shortcut for `:setProxyMode system`
 
 * `spi`, shortcut for `:proxyInfo`
 
@@ -464,13 +431,6 @@ Surfingkeys provides a simple frontend to generate diagrams from text in clipboa
 
 `Ctrl-Alt-d` to open it.
 
-## PDF viewer
-To make Surfingkeys work for PDF files, Surfingkeys integrates PDF viewer from the notable [pdf.js](https://github.com/mozilla/pdf.js). When a pdf file is opened in Chrome, the PDF viewer will be launched, and you could use everything from Surfingkeys then.
-
-If you would like to use original pdf viewer provided by Chrome itself, use `;s` to toggle that.
-
-Some functionalities are also available when you're using original pdf viewer, but some functionalities such as smooth scroll/visual mode etc won't be available.
-
 ## Edit your own settings
 
 ### Map a keystroke to some action
@@ -500,10 +460,6 @@ mapkey in visual mode
     map(new_keystroke, old_keystroke, [domain_pattern], [new_annotation])
 
     imap(new_keystroke, old_keystroke, [domain_pattern], [new_annotation])
-
-    vmap(new_keystroke, old_keystroke, [domain_pattern], [new_annotation])
-
-    cmap(new_keystroke, old_keystroke, [domain_pattern], [new_annotation])
 
 | parameter  | explanation |
 |:---------------| :-----|
@@ -573,9 +529,10 @@ works like
     mapkey('os', 'Search Selected with stackoverflow',  'searchSelectedWith("http://stackoverflow.com/search?q=")');
     vmapkey('os', 'Search Selected with stackoverflow',  'searchSelectedWith("http://stackoverflow.com/search?q=")');
 
-### remove search alias and its bindings
-
     removeSearchAliasX(alias, search_leader_key, only_this_site_key);
+
+to remove search alias and key bindings to it.
+
 
 ### Omnibar helpers
 
@@ -607,18 +564,13 @@ For example,
 |:---------------|:-----|:-----|
 | Hints.characters | "asdfgqwertzxcvb" | The characters for generating hints. |
 | Hints.scrollKeys | "0jkhlG$" | The keys that can be used to scroll page in hints mode. You need not change it unless that you have changed `Hints.characters`. |
-| settings.showModeStatus | false | Whether always to show mode status. |
-| settings.showProxyInStatusBar | false | Whether to show proxy info in status bar. |
-| settings.richHintsForKeystroke | true | Whether to show rich hints for keystroke. |
 | settings.useLocalMarkdownAPI |  true | Whether to use [chjj/marked](https://github.com/chjj/marked) to parse markdown, otherwise use github markdown API. |
 | settings.focusOnSaved | true | Whether to focus text input after quiting from vim editor. |
-| settings.omnibarMaxResults | 10 | How many results will be listed out each page for Omnibar. |
+| settings.omnibarMaxResults | 20 | How many results will be listed out for Omnibar. |
 | settings.tabsThreshold | 9 | When total of opened tabs exceeds the number, Omnibar will be used for choosing tabs. |
 | settings.hintsThreshold | 10000 | When total of regular clickable elements (a, button, select, input, textarea) exceeds this number, Surfingkeys will not show hints for other elements that are clickable. |
-| settings.clickableSelector | "" | Extra CSS selector to pick elements for hints mode, such as "\*.jfk-button, \*.goog-flat-menu-button". |
-| settings.clickablePat | /(https?&#124;thunder&#124;magnet):\/\/\S+/ig | A regex to detect clickable links from text, you could use `O` to open them. |
 | settings.smoothScroll | true | Whether to use smooth scrolling when pressing keys like `j`/`k`/`e`/`d` to scroll page or elements. |
-| settings.modeAfterYank | "" | Which mode to fall back after yanking text in visual mode. Value could be one of ["", "Caret", "Normal"], default is "", which means no action after yank.|
+| settings.collapseAfterYank | true | Whether to collapse selection to beginning after yanking text in visual mode. |
 | settings.scrollStepSize | 70 | A step size for each move by `j`/`k` |
 | settings.nextLinkRegex | /((>>&#124;next)+)/i | A regex to match links that indiate next page. |
 | settings.prevLinkRegex | /((<<&#124;prev(ious)?)+)/i| A regex to match links that indiate previous page. |
@@ -627,22 +579,9 @@ For example,
 | settings.blacklistPattern | undefined | A regex to match the sites that will have Surfingkeys disabled. |
 | settings.focusAfterClosed | "right" | Which side of tab will be focused after current tab closed. ["left", "right"] |
 | settings.repeatThreshold | 99 | The maximum of actions to be repeated. |
-| settings.tabsMRUOrder | true | Whether to list opened tabs in order of most recently used beneath Omnibar. |
-| settings.historyMUOrder | true | Whether to list history in order of most used beneath Omnibar. |
+| settings.tabsMRUOrder | true | Whether to list opened tabs in order of most recently used. |
 | settings.newTabPosition | 'default' | Where to new tab. ["left", "right", "first", "default"] |
 | settings.interceptedErrors | [] | Indiates for which errors Surfingkeys will show error page, so that you could use Surfingkeys on those error pages. For example, ["*"] to show error page for all errors, or ["net::ERR_NAME_NOT_RESOLVED"] to show error page only for ERR_NAME_NOT_RESOLVED, please refer to [net_error_list.h](https://github.com/adobe/chromium/blob/master/net/base/net_error_list.h) for complete error list.  |
-| settings.startToShowEmoji | 2 | How many characters are needed after colon to show emoji suggestion. |
-| settings.language | undefined | The language of the usage popover, only "zh-CN" is added for now, PR for any other language is welcomed, please see [l10n.json](https://github.com/brookhong/Surfingkeys/blob/master/pages/l108.json). |
-| settings.stealFocusOnLoad | true | Whether to prevent focus on input on page loaded, set to true by default so that we could use Surfingkeys directly after page loaded, otherwise we need press `Esc` to quit input. |
-| settings.theme | undefined | To change css of the Surfingkeys UI elements. |
-
-### Example of settings.theme, below is to set font size of status bar
-
-    settings.theme = `
-        #sk_status, #sk_find {
-            font-size: 20pt;
-        }
-    }`;
 
 ## Build
 
@@ -655,7 +594,6 @@ For example,
 * [TRIE](https://github.com/mikedeboer/trie), finally replaced by my own simple implementation for less memory usage and better performance.
 * [ACE vim editor](https://github.com/ajaxorg/ace), for vim editor.
 * [markdown parser](https://github.com/chjj/marked), for markdown parser.
-* [pdf.js](https://github.com/mozilla/pdf.js), for pdf viewer.
 * [vimium](https://github.com/philc/vimium), for the days without this extension.
 * [cVim](https://github.com/1995eaton/chromium-vim), for the days without this extension.
 

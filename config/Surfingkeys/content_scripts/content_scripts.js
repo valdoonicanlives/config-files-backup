@@ -1,39 +1,3 @@
-document.addEventListener("DOMNodeInsertedIntoDocument", function(evt) {
-    var elm = evt.srcElement;
-    if (elm.tagName === "EMBED" && elm.type === "application/pdf") {
-        var url = new URL(elm.src);
-        chrome.storage.local.get("noPdfViewer", function(resp) {
-            if (!resp.noPdfViewer) {
-                setTimeout(function() {
-                    // stop before redirect to prevent chrome crash
-                    window.stop();
-                    window.location.replace(chrome.extension.getURL("/pages/pdf_viewer.html") + "?r=" + elm.src);
-                }, 0);
-            }
-        });
-    }
-}, true);
-
-var getTopURLPromise = new Promise(function(resolve, reject) {
-    if (window === top) {
-        resolve(window.location.href);
-    } else {
-        runtime.command({
-            action: "getTopURL"
-        }, function(rs) {
-            resolve(rs.url);
-        });
-    }
-});
-
-function shouldWorkFor(domain, cb) {
-    getTopURLPromise.then(function(url) {
-        if (!domain || domain.test(url)) {
-            cb();
-        }
-    });
-}
-
 if (typeof(Commands) === 'undefined') {
     Commands = { items: {} };
 }
@@ -76,7 +40,7 @@ function parseCommand(cmdline) {
 }
 
 RUNTIME = function(action, args) {
-    var actionsRepeatBackground = ['closeTab', 'nextTab', 'previousTab', 'moveTab', 'reloadTab', 'setZoom', 'closeTabLeft','closeTabRight'];
+    var actionsRepeatBackground = ['closeTab', 'nextTab', 'previousTab', 'moveTab', 'reloadTab', 'setZoom'];
     (args = args || {}).action = action;
     if (actionsRepeatBackground.indexOf(action) !== -1) {
         // if the action can only be repeated in background, pass repeats to background with args,
@@ -115,7 +79,7 @@ function autocmd(domain, jscode) {
 function _parseAnnotation(ag) {
     var annotations = ag.annotation.match(/#(\d+)(.*)/);
     if (annotations !== null) {
-        ag.feature_group = parseInt(annotations[1]);
+        ag.feature_group = annotations[1];
         ag.annotation = annotations[2];
     }
     return ag;
@@ -138,7 +102,7 @@ function createKeyTarget(code, ag, repeatIgnore) {
 
 function _mapkey(mode, keys, annotation, jscode, options) {
     options = options || {};
-    shouldWorkFor(options.domain, function() {
+    if (!options.domain || options.domain.test(window.location.origin)) {
         keys = encodeKeystroke(keys);
         mode.mappings.remove(keys);
         if (typeof(jscode) === 'string') {
@@ -148,7 +112,7 @@ function _mapkey(mode, keys, annotation, jscode, options) {
         var ag = (!Front.isProvider()) ? null : {annotation: annotation, feature_group: ((mode === Visual) ? 9 :14)};
         var keybound = createKeyTarget(jscode, ag, options.repeatIgnore);
         mode.mappings.add(keys, keybound);
-    });
+    }
 }
 
 function mapkey(keys, annotation, jscode, options) {
@@ -164,7 +128,7 @@ function imapkey(keys, annotation, jscode, options) {
 }
 
 function map(new_keystroke, old_keystroke, domain, new_annotation) {
-    shouldWorkFor(domain, function() {
+    if (!domain || domain.test(window.location.origin)) {
         if (old_keystroke[0] === ':') {
             var cmdline = old_keystroke.substr(1);
             var args = parseCommand(cmdline);
@@ -187,18 +151,18 @@ function map(new_keystroke, old_keystroke, domain, new_annotation) {
                 Mode.specialKeys[old_keystroke].push(new_keystroke);
             }
         }
-    });
+    }
 }
 
 function unmap(keystroke, domain) {
-    shouldWorkFor(domain, function() {
+    if (!domain || domain.test(window.location.origin)) {
         keystroke = encodeKeystroke(keystroke);
         Normal.mappings.remove(keystroke);
-    });
+    }
 }
 
 function unmapAllExcept(keystrokes, domain) {
-    shouldWorkFor(domain, function() {
+    if (!domain || domain.test(window.location.origin)) {
         var modes = [Normal, Visual, Insert];
         if (typeof(Omnibar) !== 'undefined') {
             modes.push(Omnibar);
@@ -217,11 +181,11 @@ function unmapAllExcept(keystrokes, domain) {
             mode.mappings = _mappings;
             mode.map_node = _mappings;
         });
-    });
+    }
 }
 
 function imap(new_keystroke, old_keystroke, domain, new_annotation) {
-    shouldWorkFor(domain, function() {
+    if (!domain || domain.test(window.location.origin)) {
         var old_map = Insert.mappings.find(encodeKeystroke(old_keystroke));
         if (old_map) {
             var nks = encodeKeystroke(new_keystroke);
@@ -230,47 +194,19 @@ function imap(new_keystroke, old_keystroke, domain, new_annotation) {
             var meta = $.extend({}, old_map.meta);
             Insert.mappings.add(nks, meta);
         }
-    });
-}
-
-function iunmap(keystroke, domain) {
-    shouldWorkFor(domain, function() {
-        Insert.mappings.remove(encodeKeystroke(keystroke));
-    });
-}
-
-function cmap(new_keystroke, old_keystroke, domain, new_annotation) {
-    if (typeof(Omnibar) !== 'undefined') {
-        shouldWorkFor(domain, function() {
-            var old_map = Omnibar.mappings.find(encodeKeystroke(old_keystroke));
-            if (old_map) {
-                var nks = encodeKeystroke(new_keystroke);
-                Omnibar.mappings.remove(nks);
-                // meta.word need to be new
-                var meta = $.extend({}, old_map.meta);
-                Omnibar.mappings.add(nks, meta);
-            }
-        });
     }
 }
 
-function vmap(new_keystroke, old_keystroke, domain, new_annotation) {
-    shouldWorkFor(domain, function() {
-        var old_map = Visual.mappings.find(encodeKeystroke(old_keystroke));
-        if (old_map) {
-            var nks = encodeKeystroke(new_keystroke);
-            Visual.mappings.remove(nks);
-            // meta.word need to be new
-            var meta = $.extend({}, old_map.meta);
-            Visual.mappings.add(nks, meta);
-        }
-    });
+function iunmap(keystroke, domain) {
+    if (!domain || domain.test(window.location.origin)) {
+        Insert.mappings.remove(encodeKeystroke(keystroke));
+    }
 }
 
 function vunmap(keystroke, domain) {
-    shouldWorkFor(domain, function() {
+    if (!domain || domain.test(window.location.origin)) {
         Visual.mappings.remove(encodeKeystroke(keystroke));
-    });
+    }
 }
 
 AceVimMappings = [];
@@ -324,32 +260,7 @@ function removeSearchAliasX(alias, search_leader_key, only_this_site_key) {
 function walkPageUrl(step) {
     var numbers = window.location.href.match(/^(.*\/[^\/\d]*)(\d+)([^\d]*)$/);
     if (numbers && numbers.length === 4) {
-        var cp = parseInt(numbers[2]);
-        if (cp < 0xffffffff) {
-            window.location.href = numbers[1] + (cp + step) + numbers[3];
-            return true;
-        }
-    }
-    return false;
-}
-
-function previousPage() {
-    var prevLinks = $('a, button, *:css(cursor=pointer)').regex(runtime.conf.prevLinkRegex).filterInvisible();
-    if (prevLinks.length) {
-        clickOn(prevLinks);
-        return true;
-    } else {
-        return walkPageUrl(-1);
-    }
-}
-
-function nextPage() {
-    var nextLinks = $('a, button, *:css(cursor=pointer)').regex(runtime.conf.nextLinkRegex).filterInvisible();
-    if (nextLinks.length) {
-        clickOn(nextLinks);
-        return true;
-    } else {
-        return walkPageUrl(1);
+        window.location.href = numbers[1] + (parseInt(numbers[2]) + step) + numbers[3];
     }
 }
 
@@ -396,14 +307,6 @@ function tabOpenLink(str, simultaneousness) {
     }
 }
 
-function constructSearchURL(se, word) {
-    if (se.indexOf("{0}") > 0) {
-        return se.format(word);
-    } else {
-        return se + word;
-    }
-}
-
 function searchSelectedWith(se, onlyThisSite, interactive, alias) {
     Front.getContentFromClipboard(function(response) {
         var query = window.getSelection().toString() || response.data;
@@ -413,7 +316,7 @@ function searchSelectedWith(se, onlyThisSite, interactive, alias) {
         if (interactive) {
             Front.openOmnibar({type: "SearchEngine", extra: alias, pref: query});
         } else {
-            tabOpenLink(constructSearchURL(se, encodeURIComponent(query)));
+            tabOpenLink(se + encodeURIComponent(query));
         }
     });
 }
@@ -505,13 +408,6 @@ function applySettings(rs) {
     }
     if (('snippets' in rs) && rs.snippets) {
         var delta = runUserScript(rs.snippets);
-        if (delta.error !== "") {
-            if (window === top) {
-                Front.showPopup("Error found in settings: " + delta.error);
-            } else {
-                console.log("Error found in settings({0}): {1}".format(window.location.href, delta.error));
-            }
-        }
         if (!jQuery.isEmptyObject(delta.settings)) {
             if ('theme' in delta.settings) {
                 $(document).trigger("surfingkeys:themeChanged", [delta.settings.theme]);
@@ -532,13 +428,8 @@ function applySettings(rs) {
                     settings: delta.settings
                 });
             }
-        }
-    }
-    if (runtime.conf.showProxyInStatusBar && 'proxyMode' in rs) {
-        if (["byhost", "always"].indexOf(rs.proxyMode) !== -1) {
-            Front.showStatus(3, "{0}: {1}".format(rs.proxyMode, rs.proxy));
-        } else {
-            Front.showStatus(3, rs.proxyMode);
+        } else if (delta.error !== "" && window === top) {
+            Front.showPopup("Error found in settings: " + delta.error);
         }
     }
 }
@@ -547,27 +438,29 @@ runtime.on('settingsUpdated', function(response) {
     var rs = response.settings;
     applySettings(rs);
     if (rs.hasOwnProperty('blacklist') || runtime.conf.blacklistPattern) {
-
+        var disabled = checkBlackList(rs);
         // only toggle Disabled mode when blacklist is updated
-        runtime.command({
-            action: 'getDisabled',
-            blacklistPattern: (runtime.conf.blacklistPattern ? runtime.conf.blacklistPattern.toJSON() : "")
-        }, function(resp) {
-            if (resp.disabled) {
-                Disabled.enter(0, true);
-            } else {
-                Disabled.exit();
-            }
+        if (disabled) {
+            Disabled.enter();
+        } else {
+            Disabled.exit();
+        }
 
-            if (window === top) {
-                runtime.command({
-                    action: 'setSurfingkeysIcon',
-                    status: resp.disabled
-                });
-            }
-        });
+        if (window === top) {
+            runtime.command({
+                action: 'setSurfingkeysIcon',
+                status: disabled
+            });
+        }
     }
 });
+
+function checkBlackList(sb) {
+    return chrome.extension.getURL('').indexOf(window.location.origin) !== 0 && (
+        sb.blacklist[window.location.origin] || sb.blacklist['.*']
+        || (runtime.conf.blacklistPattern && typeof(runtime.conf.blacklistPattern.test) === "function" && runtime.conf.blacklistPattern.test(window.location.href))
+    );
+}
 
 $(document).on('surfingkeys:defaultSettingsLoaded', function() {
     runtime.command({
@@ -579,26 +472,22 @@ $(document).on('surfingkeys:defaultSettingsLoaded', function() {
 
         Normal.enter();
 
-        runtime.command({
-            action: 'getDisabled',
-            blacklistPattern: (runtime.conf.blacklistPattern ? runtime.conf.blacklistPattern.toJSON() : "")
-        }, function(resp) {
-            if (resp.disabled) {
-                Disabled.enter(0, true);
-            } else {
-                document.addEventListener('DOMContentLoaded', function(e) {
-                    GetBackFocus.enter(0, true);
-                });
-            }
+        var disabled = checkBlackList(rs);
+        if (disabled) {
+            Disabled.enter();
+        } else {
+            document.addEventListener('DOMContentLoaded', function(e) {
+                GetBackFocus.enter();
+            });
+        }
 
-            if (window === top) {
-                // this block being put here instead of top.js is to ensure sequence.
-                runtime.command({
-                    action: 'setSurfingkeysIcon',
-                    status: resp.disabled
-                });
-            }
-        });
+        if (window === top) {
+            // this block being put here instead of top.js is to ensure sequence.
+            runtime.command({
+                action: 'setSurfingkeysIcon',
+                status: disabled
+            });
+        }
     });
 });
 

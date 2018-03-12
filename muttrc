@@ -1,176 +1,132 @@
-#################################
-# IMAP + SMTP + NAME information
-#################################
-# GMAIL SETTINGS
-#set imap_user = "delwoode@gmail.com"
-#set imap_pass = "0downy1959"
-#set smtp_url = "smtp://delwoode@smtp.gmail.com:587/"
-#set smtp_pass = "0downy1959"
-#set from = "delwoode@gmail.com"
-#set realname = "Derek"
-################################
+
+# hotkeys to remeber
+# Ctrl+G = cancle a prompt
+# y = change to different mailboxes
+
 # Default account
 source ~/.mutt/account.com.gmail.delwoode
-# Sync email its not automatic you have to press the o or O key DK
-#macro index O "<shell-escape>offlineimap<enter>"           "run offlineimap to sync all mail"
+
 # Folder hooks
 folder-hook 'account.com.gmail.delwoode' 'source ~/.mutt/account.com.gmail.delwoode'
 folder-hook 'account.com.hotmail.elwoode' 'source ~/.mutt/account.com.hotmail.elwoode'
 folder-hook 'account.com.gmail.arthurdentgwm' 'source ~/.mutt/account.com.gmail.arthurdentgwm'
 
+# Macros for switching to the different accounts
 macro index o '<sync-mailbox><enter-command>source ~/.mutt/account.com.gmail.delwoode<enter><change-folder>!<enter>'
 macro index <F9> '<sync-mailbox><enter-command>source ~/.mutt/account.com.hotmail.elwoode<enter><change-folder>!<enter>'
 macro index <F10> '<sync-mailbox><enter-command>source ~/.mutt/account.com.gmail.arthurdentgwm<enter><change-folder>!<enter>'
-###############################
-set sendmail = "/usr/local/bin/msmtp -a default"
-set sendmail_wait = 0
-###############################
-# SETTING SENSIBLE DEFAULTS
-################################
-#-------- from gotbletus muttrc
-    
+
+# Fetch mail shortcut
+bind index G imap-fetch-mail
+
+
+# Set default text editor you have set in your bashrc or xinit
+set editor = "$EDITOR"
+
+
+#-------- Basic config, you can leave this as is {{{
+#------------------------------------------------------
 set ssl_starttls = yes
 set ssl_force_tls = yes
 set imap_check_subscribed
-#------------------------------------------------------
-#set folder = "imaps://imap.gmail.com:993"
 set mbox_type = Maildir                                # mailbox type
-#set folder    = ~/Mail/Gmail                           # default mailbox location
-set spoolfile = "+INBOX"                               # default inbox
-set postponed = "+[GMail]/.Drafts"
-set imap_check_subscribed
-set hostname = gmail.com
-set mail_check = 120      # How often mutt checks for mail (was 0 as was using offlineimap instead)
-set timeout = 300
-set imap_keepalive = 300
-# Sidebar settings --------------------------------------------
-set sidebar_short_path
-set sidebar_delim_chars   = '/'
-set sidebar_visible = yes
-set sidebar_width   = 25
-set sidebar_folder_indent = yes
-set sidebar_indent_string = ' 's
-#
-macro index b '<enter-command>toggle sidebar_visible<enter><refresh>'
-macro pager b '<enter-command>toggle sidebar_visible<enter><redraw-screen>'
-
-set pager_index_lines = 10
-# Ctrl-n, Ctrl-p to select next, previous folder.
-# Ctrl-o to open selected folder.
-bind index,pager \CP sidebar-prev
-bind index,pager \CN sidebar-next
-bind index,pager \CO sidebar-open
-# END sidebar settings --------------
-
-set delete                                                       # don't ask, just do
-unset confirmappend                                              # don't ask, just do!
-set quit                                                         # don't ask, just do!!
-unset mark_old                                                   # read/new is good enough for me
-set pipe_decode                                                  # strip headers and eval mimes when piping
-set thorough_search                                              # strip headers and eval mimes before searching
-unset mime_forward      # I don't want your mime in my beautiful messages
-# boxes
-# IMAP and INBOX (this should map to any existing IMAP folders)
-mailboxes = +GMail/INBOX \
-=+GMail/Sent \
-=+GMail/Drafts \
-=+GMail/Trash 
-###
-###
-#mailboxes +GMail/INBOX +GMail/Sent +GMail/Drafts +GMail/Trash
-#mailboxes +Adent/INBOX +Adent/sent
-###########################
-# account specific sources
-#folder-hook Adent/* source ~/.mutt/Adent.muttrc
-###########################
-# MACROS FOR GMAIL TASKS
-###########################
-macro index,pager gi "<change-folder>=INBOX<enter>" "Go to inbox"
-macro index,pager ga "<change-folder>=[Gmail]/All<quote-char> Mail<enter>" "Go to all mail"
-macro index,pager gs "<change-folder>=[Gmail]/Starred<enter>" "Go to starred messages"
-macro index,pager gd "<change-folder>=[Gmail]/.Drafts<enter>" "Go to drafts"
-#macro index <f4>     "<change-folder> =Adent/INBOX<enter>"  "go to Adent inbox"
-macro index,pager <F5> ":source ~/.muttrc\n"              "Reload the muttrc"
-####################
-# Colors
-source ~/.mutt/colors.zenburn
-# composing mail
-#set from              = "elwoode@hotmail.co.uk"
-set realname            = "DK"                           # who am i?
-##################################
-# SORTING BY THREADS, NEWEST FIRST
-##################################
-set sort = 'threads'
-set sort_aux = 'reverse-last-date-received'
-###############################
-###############################
-# HIDE MOST OF THE EMAIL HEADER
-###############################
-#ignore *
-#unignore from: date subject to cc
-#unignore x-mailing-list: posted-to:
-#unignore x-mailer:
-#hdr_order Date From To Cc
-ignore *                                                         # ignore all headers
-unignore from: to: cc: date: subject:                            # show only these
-hdr_order from: to: cc: date: subject:                           # and in this order
-###############################
-###############################
-# MISCELLANEOUS SETTINGS 
-##############################
-set editor = "nvim"
-# set spell check and 75 characters to a line
-set editor="nvim -c 'set nohlsearch noshowmatch modelines=0 tw=75 noai spell'"
-set text_flowed=yes       # send format-flowed; vim must be set to fo+=w
 # Path to mailcap file
 set mailcap_path = "/home/dka/.mutt/mailcap"
-#==
-# Mailing lists
-lists arch-announce@archlinux.org                            # Arch announcements
-subscribe arch-announce@archlinux.org
-#===================
-set markers = no                          # We don't need an indicator to see that a line is wrapped
-# Pager View Options ---------------------------------
+# set hostname = gmail.com
+set mail_check = 120
+set timeout = 300
+set imap_keepalive = 300
+# set record = "+[GMail]/Sent Mail"
+set move = no
+set copy= no             # We don't want a copy 
+set include
+set sort = 'threads'
+set sort_aux = 'reverse-last-date-received'
+set auto_tag = yes
+ignore "Authentication-Results:"
+ignore "DomainKey-Signature:"
+ignore "DKIM-Signature:"
+hdr_order Date From To Cc
+alternative_order text/plain text/html *
+auto_view text/html
 set pager_index_lines = 10 # number of index lines to show
 set pager_context = 3      # number of context lines to show
 set header_cache=~/.mutt/cache/headers    # Cache headers for faster access
 set message_cachedir=~/.mutt/cache/bodies # Cache bodies for faster access
-set certificate_file=~/.mutt/certificates # Tell Mutt where to save certs
-set move = no                             # Don't move messages after reading them
-set copy= no             # We don't want a copy 
-unset move              # We don't want mutt to move read messages
-set include = yes                               # Include original message in reply
-set auto_tag = yes                        # Because it just makes sense
-unset record                              # With Gmail all mail goes to the same place
-# open in gui browser: hit "v" then go down to text/html then hit "m"
-bind attach <return> view-mailcap
-auto_view text/html                                      # view html automatically
-alternative_order text/plain text/enriched text/html     # list html for last
-# these just give me headaches
-bind index,pager \#     noop
-bind index i            noop
-# bindings ####################
-#bind pager q            exit
-bind pager /            search
-bind pager <up>         previous-line
-bind pager <down>       next-line
-bind pager k            previous-line
-bind pager j            next-line
-bind pager gg           top
-bind pager G            bottom
-bind index W            clear-flag
-bind index w            set-flag
-macro index 	h "c?\t"	# show the "folder view" when I hit 'h'
+bind editor <Tab> complete-query
+bind editor ^T complete
+bind editor <space> noop 
+unset mime_forward      # I don't want your mime in my beautiful messages
+# }}}
+##-------- Gmail-style keyboard shortcuts {{{
+##------------------------------------------------------
+#macro index,pager y "<enter-command>unset trash\n <delete-message>" "Gmail archive message"
+#macro index,pager d "<enter-command>set trash=\"imaps://imap.googlemail.com/[GMail]/Bin\"\n <delete-message>" "Gmail delete message"
+#macro index,pager gi "<change-folder>=INBOX<enter>" "Go to inbox"
+#macro index,pager ga "<change-folder>=[Gmail]/All Mail<enter>" "Go to all mail"
+#macro index,pager gs "<change-folder>=[Gmail]/Starred<enter>" "Go to starred messages"
+#macro index,pager gd "<change-folder>=[Gmail]/Drafts<enter>" "Go to drafts"
+## }}}
+##-------- Keybinding {{{
+##------------------------------------------------------
+## http://www.michnet.de/mutt/#bindings
+#bind pager l next-line
+#bind pager h previous-line
+# }}}
+#-------- Color Theme {{{
+#------------------------------------------------------
 
-########################
+color hdrdefault cyan default
+color attachment yellow default
+
+color header brightyellow default "From: "
+color header brightyellow default "Subject: "
+color header brightyellow default "Date: "
+
+color quoted green default
+color quoted1 cyan default
+color quoted2 green default
+color quoted3 cyan default
+
+color error     red             default         # error messages
+color message   white           default         # message  informational messages
+color indicator white           red             # indicator for the "current message"
+color status    white           blue            # status lines in the folder index sed for the mini-help line
+color tree      red             default         # the "tree" display of threads within the folder index
+color search    white           blue            # search matches found with search within the internal pager
+color markers   red             default         # The markers indicate a wrapped line hen showing messages with looong lines
+
+color index     yellow default  '~O'
+color index     yellow default  '~N'
+color index     brightred       default '~F'    # Flagged Messages are important!
+color index     blue default    '~D'            # Deleted Mails - use dark color as these are already "dealt with"
+# }}} 
 # my alias's  ##########
+# so when you type m for new mail in the to box just type cb and it will send it to the alias you set ie chrberendsen@hotmail.com
 alias elwoode elwoode@hotmail.co.uk
 alias delwoode delwoode@gmail.com
 alias cb chrberendsen@hotmail.com 
 alias maggie ginnyfoss@talktalk.net
 alias jan&mike gusandspike@talktalk.net
 alias gus gusandspike@talktalk.net
-alias janet janetspostbox@yahoo.co.uk
 alias jan janetspostbox@yahoo.co.uk
 alias louie louie.1965@live.co.uk
 alias jaymily kingfisher1965@live.com
+
+##-------- Sidebar {{{
+##------------------------------------------------------
+#set sidebar_visible = yes
+#macro index b '<enter-command>toggle sidebar_visible<enter><refresh>'
+#macro pager b '<enter-command>toggle sidebar_visible<enter><redraw-screen>'
+#
+## Ctrl-n, Ctrl-p to select next, previous folder.
+## Ctrl-o to open selected folder.
+#bind index,pager \CP sidebar-prev
+#bind index,pager \CN sidebar-next
+#bind index,pager \CO sidebar-open
+
+# }}}
+
+#For GPG support, add the following to your muttrc:
+#source /etc/Muttrc.gpg.dist
+

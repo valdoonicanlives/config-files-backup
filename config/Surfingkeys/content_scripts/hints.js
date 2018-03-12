@@ -45,7 +45,7 @@ var Hints = (function(mode) {
             mouseEvents: ['mouseover', 'mousedown', 'mouseup', 'click']
         },
         style = $("<style></style>"),
-        holder = $('<div id=sk_hints style="display: block; opacity: 1;"/>');
+        holder = $('<div id=sk_hints/>');
     self.characters = 'asdfgqwertzxcvb';
     self.scrollKeys = '0jkhlG$';
     var _lastCreateAttrs = {},
@@ -66,8 +66,8 @@ var Hints = (function(mode) {
         var matches = refresh();
         if (matches.length === 1) {
             Normal.appendKeysForRepeat("Hints", prefix);
-            var link = $(matches[0]).data('link'), match = $(matches[0]).data('match');
-            _onHintKey(link, event, match);
+            var link = $(matches[0]).data('link');
+            _onHintKey(link, event);
             if (behaviours.multipleHits) {
                 prefix = "";
                 refresh();
@@ -190,7 +190,8 @@ var Hints = (function(mode) {
     };
 
     function placeHints(elements) {
-        holder.attr('mode', 'click').show().html('');
+        holder.removeClass("hintsForTextNode");
+        holder.show().html('');
         var hintLabels = self.genLabels(elements.length);
         var bof = self.coordinate();
         style.appendTo(holder);
@@ -233,8 +234,6 @@ var Hints = (function(mode) {
     }
 
     function createHintsForClick(cssSelector, attrs) {
-        self.statusLine = "Hints to click";
-
         attrs = $.extend({
             active: true,
             tabbed: false,
@@ -246,9 +245,6 @@ var Hints = (function(mode) {
         }
         if (cssSelector === "") {
             cssSelector = "a, button, select, input, textarea";
-            if (runtime.conf.clickableSelector.length) {
-                cssSelector += ", " + runtime.conf.clickableSelector;
-            }
             if (!runtime.conf.hintsThreshold || $(cssSelector).length < runtime.conf.hintsThreshold) {
                 // to avoid bad performance when there are too many clickable elements.
                 cssSelector += ", *:css(cursor=pointer), *[onclick]";
@@ -268,70 +264,21 @@ var Hints = (function(mode) {
         return elements.length;
     }
 
-    function getTextNodePos(node, offset) {
-        var selection = document.getSelection();
-        selection.setBaseAndExtent(node, offset, node, offset+1)
-        var br = selection.getRangeAt(0).getBoundingClientRect();
-        return {
-            left: br.left,
-            top: br.top
-        };
-    }
+    function createHintsForTextNode() {
 
-    function createHintsForTextNode(rxp, attrs) {
-
-        self.statusLine = (attrs && attrs.statusLine) || "Hints to select text";
-
-        var elements = getTextNodes(document.body, rxp);
-
-        var positions;
-        if (rxp.flags.indexOf('g') === -1) {
-            positions = elements.map(function(e) {
-                return [e, 0, ""];
-            });
-        } else {
-            positions = [];
-            for (var i = 0, length = elements.length; i < length; i++) {
-                var e = elements[i], match;
-                while ((match = rxp.exec(e.data)) != null) {
-                    positions.push([e, match.index, match[0]]);
-                }
-            }
-        }
-
-        elements = positions.map(function(e) {
-            var pos = getTextNodePos(e[0], e[1]);
-            if (pos.top < 0 || pos.top > window.innerHeight
-                || pos.left < 0 || pos.left > window.innerWidth) {
-                return null;
-            } else {
-                return $('<div/>').css('position', 'fixed').css('top', pos.top).css('left', pos.left)
-                    .css('z-index', 9999)
-                    .data('z-index', 9999)
-                    .data('link', e[0])
-                    .data('offset', e[1])
-                    .data('match', e[2]);
-            }
-        }).filter(function(e) {
-            return e !== null;
-        });
-
+        var elements = $(getTextNodes(document.body, /./, 2));
+        elements = elements.filterInvisible();
         if (elements.length > 0) {
-            holder.attr('mode', 'text').show().html('');
-            var hintLabels = self.genLabels(elements.length);
-            elements.forEach(function(e, i) {
-                e.data('label', hintLabels[i]).html(hintLabels[i]);
-                holder.append(e);
-            });
-            style.appendTo(holder);
-            holder.appendTo('body');
+            placeHints(elements);
+            holder.addClass("hintsForTextNode");
+
         }
 
         return elements.length;
     }
 
     function createHints(cssSelector, attrs) {
-        return (cssSelector.constructor.name === "RegExp") ? createHintsForTextNode(cssSelector, attrs) : createHintsForClick(cssSelector, attrs);
+        return (cssSelector === "TEXT_NODES") ? createHintsForTextNode() : createHintsForClick(cssSelector, attrs);
     }
 
     self.create = function(cssSelector, onHintKey, attrs) {
@@ -340,29 +287,12 @@ var Hints = (function(mode) {
         _onHintKey = onHintKey;
         _lastCreateAttrs = attrs;
 
-        var start = new Date().getTime();
-        if (createHints(cssSelector, attrs) > 1) {
-            self.statusLine += " - " + (new Date().getTime() - start) + "ms";
+        if (createHints(cssSelector, attrs)) {
             self.enter();
-        } else {
-            handleHint();
         }
     };
 
-    var flashElem = $('<div style="position: fixed; box-shadow: 0px 0px 4px 2px #63b2ff; background: transparent; z-index: 2140000000"/>')[0];
-    function flashPressedLink(link) {
-        var rect = link.getBoundingClientRect();
-        flashElem.style.left = rect.left + 'px';
-        flashElem.style.top = rect.top + 'px';
-        flashElem.style.width = rect.width + 'px';
-        flashElem.style.height = rect.height + 'px';
-        document.body.appendChild(flashElem);
-
-        setTimeout(function () { flashElem.remove(); }, 300);
-    }
-
     self.dispatchMouseClick = function(element, event) {
-        flashPressedLink(element);
         if (isEditable(element)) {
             self.exit();
             Insert.enter();

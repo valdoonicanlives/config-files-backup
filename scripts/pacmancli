@@ -1,0 +1,591 @@
+#!/bin/bash
+
+#  This program is free software; you can redistribute it and/or modify
+#  it under the terms of the GNU General Public License as published by
+#  the Free Software Foundation; either version 2 of the License, or
+#  (at your option) any later version.
+#
+#  This program is distributed in the hope that it will be useful,
+#  but WITHOUT ANY WARRANTY; without even the implied warranty of
+#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#  GNU General Public License for more details.
+#
+#  You should have received a copy of the GNU General Public License
+#  along with this program; if not, write to the Free Software
+#  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,
+#  MA 02110-1301, USA.
+#
+
+#################################################################
+# Design based on IceFox script                                 #
+# Modified, adapted and improved by pekman and excalibur1234    #
+# translation by spylinux                                       #
+# fzf and Downgrade support added by Chrysostomus               #
+# Contact and suggestions: pekman@openmailbox.org               #
+# Freenode: #manjaropek #manjaro-geek #manjaro                  #
+# Topic discussion                                              #
+#                       http://polr.me/pacli1                   #
+#################################################################
+
+pkgname=pacli
+
+unset NOCLEAR
+
+export TEXTDOMAIN=pacli
+export TEXTDOMAINDIR="/usr/share/locale"
+
+# user parameters, default values in paclirc
+declare -A PARAMS=(
+    ['helpred']="1"       # show help for red command by default
+    ['cancellist']=1      # add "CANCEL" string on fzf list
+    ['menuex']=1          # touch [m] show main menu fzf
+    ['helper']='yaourt'   # yaourt,pacaur not !apacman
+    ['hook']=1            # display descriptions after install - upgrade
+    ['peditor']=''        # diff editor .pacnews files
+    ['boxcolor']=''       # theme color
+)
+
+# load tools functions
+libfile='./lib/pacli-tools.sh'
+[ -f "$libfile" ] || libfile="/usr/lib/${pkgname}/pacli-tools.sh"
+. "$libfile"
+
+# load user config
+load_user_params
+
+########    menu    ########
+
+# set colors
+declare -r RED='\e[31m'
+declare -r BOLD='\e[1m'
+declare -r NC='\e[0m'
+
+type -t gettext &> /dev/null || { gettext() { echo "$@"; }; }
+
+declare -a MENUS=(
+    "┌─┐"
+    "1:$(gettext 'Update System')"
+    "2:$(gettext 'Clean System')"
+    "3:$(gettext 'Install Package')"
+    "4:$(gettext 'Remove Package + Deps')"
+    "5:$(gettext 'Package Information')"
+    "6:$(gettext 'List Local Package Files')"
+    "7:$(gettext 'Dependency Tree')"
+    "8:$(gettext 'Reverse Dependency Tree')"
+    "└─┘"
+    "┌─┐"
+    "9:$(gettext 'Defragment Database')"
+    "10:$(gettext 'Help')"
+    "11:$(gettext 'Downgrade Packages')"
+    "12:$(gettext 'Pacman Log')"
+    "13:$(gettext 'Fix Errors'):$RED"
+    "14:$(gettext 'Configure Pacman'):$RED"
+    "15:$(gettext 'Force Install Package'):$RED"
+    "16:$(gettext 'Force Update System'):$RED"
+    "17:$(gettext 'Force Remove Package'):$RED"
+    "18:$(gettext 'Empty Package Cache'):$RED"
+    "└─┘"
+    ""
+    "┌─┐"
+    "19:$(gettext 'Update AUR')"
+    "20:$(gettext 'Force Update AUR')"
+    "21:$(gettext 'Search+Install from AUR')"
+    "22:$(gettext 'Install from AUR')"
+    "23:$(gettext 'List Installed from AUR')"
+    "24:$(gettext 'Configure ')${PARAMS['helper']^}"
+    "└─┘"
+    #extend menu, dont show >49
+    "100:$(gettext 'Informations')"
+    "111:$(gettext 'Manage .pacnews files')"
+    "120:$(gettext 'Pacman history')"
+    "220:$(gettext 'Install from git repository')"
+)
+readonly MENUS
+
+#width menu -3
+declare -i WMENU=68
+
+# param for parse option in command line
+unset LOCAL
+
+LG=${LANG:0:2}
+declare -r pacli_desc='/tmp/pacli-desc'
+
+# load helpers functions
+libfile="./lib/helper-${PARAMS['helper']}.sh"
+[ -f "$libfile" ] || libfile="/usr/lib/${pkgname}/helper-${PARAMS['helper']}.sh"
+[ -f "$libfile" ] || { echo "$(gettext 'helper not supported')" 1>&2 ; exit 1; } 
+. "$libfile"
+
+########    functions    ########
+
+# "yaourt -Sl" downloads a list of packages EVERY TIME it is called. this is unacceptable.
+# write package list of repositories to /tmp/packages. then, download AUR package list, unzip it to /tmp/aur/packages, and add it to the bottom of /tmp/packages.
+load_packages_infos()
+{
+    helper -Slq 2>/dev/null 1>/tmp/packages &
+    wget -P /tmp/aur/ https://aur.archlinux.org/packages.gz >/dev/null 2>&1 && gunzip -f /tmp/aur/packages.gz && cat /tmp/aur/packages >> /tmp/packages &
+}
+
+########    pacman    ######
+
+#5  package info
+package_information()
+{
+    declare pkg='' cmd='Sii' out
+    pacman -Qq > /tmp/local_packages
+    cat /tmp/packages /tmp/local_packages | sort -u | uniq > /tmp/all_packages
+
+    pkg=$(print_enter "$(gettext 'Select a package to display information about')" \
+        "$(cat /tmp/packages)" )
+    (($?!=0)) && return 1
+    [ -z "$pkg" ] && return 1
+    $(helper_pkgisinstalled "${pkg}") && cmd='Qii'  #(yaourt -Qq "${pkg}" &>/dev/null) && cmd='Qii'
+    out=$(helper "-$cmd" "${pkg}")
+    echo -e "$out" | grep -v "\-\-$" | sed 's/ : \(.*\)/ \x1b[0m: \x1b[1m\1\x1b[0m/; s/  \(.*\)/  \x1b[1m\1\x1b[0m/'
+    print_prompt "$(gettext 'Package information displayed')."
+}
+
+#6  List Local Package Files
+package_list_files()
+{
+    declare pkg 
+    pkg=($(print_enter "$(gettext 'Select a packages of which to list all files (use TAB to toggle selection)')" \
+            "$(helper '-Qq')" '-m' ))
+    (($?!=0)) && return 1
+    [ -z "$pkg" ] && return 1
+    pacman -Ql "${pkg[@]}"      #helper -Ql "${pkg[*]}"
+    print_prompt "$(gettext 'All local files in package listed')." "" 1
+}
+
+#13    fix errors
+fix_errors()
+{
+    declare cmd url version arch mybranch
+    sudo rm -f /var/lib/pacman/db.lck
+    cmd=(sudo pacman -Syy)
+    if [ -f "/usr/bin/pacman-mirrors" ]; then
+        sudo pacman-mirrors -g && "${cmd[@]}"
+
+        sudo rm -r /etc/pacman.d/gnupg &>/dev/null
+        arch=$(uname -m)
+        mybranch=$(awk -F'=' '/^Branch/{gsub(" ","", $2 ); print $2}' /etc/pacman-mirrors.conf)
+        [ -z "$mybranch" ] && mybranch='stable'
+        version="$(lang=C pacman -Si gnupg | awk -F':' ' /^Ver/ {print $2}' | sed 's# #-#' | head -n 1 )"
+        url="http://mirror.netzspielplatz.de/manjaro/packages/${mybranch}/core/${arch}/gnupg${version}-${arch}.pkg.tar.xz"
+        wget "${url}" && \
+            sudo pacman -U "gnupg${version}-${arch}.pkg.tar.xz" --noconfirm && \
+            sudo rm "gnupg${version}-${arch}.pkg.tar.xz"
+
+        version="$(lang=C pacman -Si archlinux-keyring | awk -F':' ' /^Ver/ {print $2}' | sed 's# #-#' | head -n 1 )"
+        url="http://mirror.netzspielplatz.de/manjaro/packages/${mybranch}/core/${arch}/archlinux-keyring${version}-any.pkg.tar.xz"
+        wget "${url}" && \
+            sudo pacman -U "archlinux-keyring${version}-any.pkg.tar.xz" --noconfirm && \
+            sudo rm "archlinux-keyring${version}-any.pkg.tar.xz"
+
+        version="$(lang=C pacman -Si manjaro-keyring | awk -F':' ' /^Ver/ {print $2}' | sed 's# #-#' | head -n 1 )"
+        url="http://mirror.netzspielplatz.de/manjaro/packages/${mybranch}/core/${arch}/manjaro-keyring${version}-any.pkg.tar.xz"
+        wget "${url}" && \
+            sudo pacman -U "manjaro-keyring${version}-any.pkg.tar.xz" --noconfirm && \
+            sudo rm "manjaro-keyring${version}-any.pkg.tar.xz"
+
+        # the following command sometimes prevents an error connecting to the key server		
+        sudo dirmngr </dev/null
+        echo "pacman-key --init"
+        sudo pacman-key --init && \
+            echo "pacman-key --populate ..." && sudo pacman-key --populate archlinux manjaro
+    elif [[ -f "/usr/bin/reflector" ]]; then
+        sudo reflector --verbose -l 4 -p http --sort rate --save /etc/pacman.d/mirrorlist && "${cmd[@]}"
+        sudo pacman -Sy gnupg archlinux-keyring && sudo rm -r /etc/pacman.d/gnupg && sudo pacman-key --init && sudo pacman-key --populate archlinux && sudo pacman-key --refresh-keys
+    else
+        "${cmd[@]}"
+    fi
+
+    sudo pacman -Sc --noconfirm
+    sudo pacman -Syyuu --color always --noconfirm
+    print_prompt "$(gettext 'Most common Pacman errors fixed and system updated')." "" 1
+}
+
+#220    Install from a repot git with a PKGBUILD file
+install_git_aur()
+{
+    declare -r dirgit='/tmp/pacli-gits'
+    declare url
+    declare -i nb
+    [ -d "$dirgit" ] && rm -rf "$dirgit"
+    read -p "$(gettext 'Enter git url repository'): " -r url
+    git clone "$url" "$dirgit" && \
+    if [ -d "$dirgit" ]; then
+        cd $dirgit
+        nb=$(git branch -a | grep -Ev "\*|>" | wc -l)
+        if ((nb>0)); then
+            branch=$(git branch -a | grep -Ev "\*|>" | sed 's/\* //' | fzf-tmux -e --reverse --prompt='Select a branch >')
+            echo "branch choise: $branch"
+            branch=${branch##*/}
+            echo "go to : $branch"
+            git checkout "$branch" #$(echo "$branch" 1>/dev/null | sed "s/.* //" | sed "s#remotes/[^/]*/##")
+            #git checkout $branch 1>/dev/null
+            git branch | grep "\*"
+            read -p "Press any key..." -n1 -s
+        fi
+        if [ -f "$dirgit/PKGBUILD" ]; then
+            #make erase if bad formed
+            [ -d "$dirgit/src" ] && rm -rfv "$dirgit/src"
+            [ -d "$dirgit/pkg" ] && rm -rfv "$dirgit/pkg"
+            [[ -n "${url##*\/}" && -f "$dirgit/${url##*\/}" ]] && rm -v "$dirgit/${url##*\/}"
+            [[ -n "${url##*\/}" && -d "$dirgit/${url##*\/}" ]] && rm -rfv "$dirgit/${url##*\/}"
+            makepkg -scfi
+        else
+            echo "$(gettext 'Error: ') $(gettext 'not AUR repot')"
+        fi
+    fi
+    [ -d "$dirgit" ] && rm -rf "$dirgit"
+    print_prompt "$(gettext 'Installation from git repo finished')."
+}
+
+#100   info repo, branch, stats yaourt
+informations ()
+{
+    declare mybranch myrepo myurl testfile
+    declare -i pacnews=0 pacsaves=0
+    mybranch=$(awk -F'=' '/^Branch/ {print $2}' /etc/pacman-mirrors.conf)
+    [ -z "$mybranch" ] && mybranch='stable'
+    myrepo=$(awk -F'=' '/^Server/ {print $2}' /etc/pacman.d/mirrorlist | head -n 1)
+    if [ -f "/usr/bin/pacman-mirrors" ]; then
+        #Server = http://server.org/stable/$repo/$arch
+        myrepo=$(echo "$myrepo" | grep -Eo "http(.*)/$mybranch")
+        myurl=${myrepo/$mybranch/}
+        testfile='state'
+    else
+        # archlinux
+        #Server = http://server.org/$repo/os/$arch
+        myrepo=$(echo "$myrepo" | grep -o "http.*")
+        myurl=${myrepo%%'$'*}
+        testfile='lastupdate'
+    fi
+
+    lastupdate=$(curl -s --head "${myurl}${testfile}" | awk -F': ' '/Last-Mo/ {print $2 }')
+
+    pacnews=$(find '/etc' -name "*.pacnew" -type f 2>/dev/null | wc -l)
+    pacsaves=$(find '/etc' -name "*.pacsave" -type f 2>/dev/null | wc -l)
+
+    mcenter "$(gettext 'Server')"
+    menu_sep "┌─┐"
+    page_item "$(gettext 'Branch')" "$mybranch" "$BOLD"
+    page_item "$(gettext 'Server')" "$myurl" "$BOLD"
+    page_item "$(gettext 'Last update')" "$(date -d "$lastupdate")" "$BOLD"
+    menu_sep "└─┘"
+    #echo
+    mcenter "$(gettext 'Packages')"
+    menu_sep "┌─┐"
+    page_item "$(gettext 'Total installed')" "$(pacman -Qq | wc -l)" "" "r"
+    page_item "$(gettext 'Explicitly installed')" "$(pacman -Qenq | wc -l)" "$BOLD" "r"
+    page_item "AUR" "$(pacman -Qmq | wc -l)" "$BOLD" "r"
+    page_item "$(gettext 'Orphans')" "$(pacman -Qdttq | wc -l)" "$BOLD" "r"
+    page_item "$(gettext 'Available')" "$(pacman -Slq | wc -l)" "$BOLD" "r"
+    page_item "$(gettext 'Available with AUR')" "$(tac /tmp/packages | wc -l)" "$BOLD" "r"
+    menu_sep "└─┘"
+
+    if ((pacnews>0 || pacsaves>0)); then
+        #echo
+        mcenter "$(gettext 'Pacman config files')"
+        menu_sep "┌─┐"
+        ((pacnews>0)) &&  page_item "$(gettext 'PacNew files')" "$pacnews" "$BOLD" "r"
+        ((pacsaves>0)) && page_item "$(gettext 'PacSave files')" "$pacsaves" "$BOLD" "r"
+        menu_sep "└─┘"
+    fi
+
+    mcenter "$(gettext 'Pacli Config')"
+    menu_sep "┌─┐"
+    page_item "$(gettext 'help before red ')(helpred)" "$(int_to_yes ${PARAMS['helpred']})"
+    page_item "$(gettext 'extend menu') (menuex)" "$(int_to_yes ${PARAMS['menuex']})"
+    page_item "$(gettext 'cancel in list') (cancellist)" "$(int_to_yes ${PARAMS['cancellist']})"
+    page_item "$(gettext 'show descriptions') (hook)" "$(int_to_yes ${PARAMS['hook']})"
+    page_item "helper" "${PARAMS['helper']}"
+    menu_sep "└─┘"
+
+    #yaourt --stats
+    print_prompt "$(gettext 'General Informations')."
+}
+
+#111    pacnews
+run_pacnews ()
+{
+    declare libfile='./lib/pacnew.sh'
+    [ -f "$libfile" ] || libfile="/usr/lib/${pkgname}/pacnew.sh"
+    . "$libfile"
+    main_pacnew
+}
+
+########    PACTREE    ########
+
+#7
+pactree_run()
+{
+    declare pkg=$(print_enter "$(gettext 'Select a package')" "$(pacman -Qq)" )
+    (($?!=0)) && return 1
+    [ -z "$pkg" ] && return 1
+    declare option='s'
+    ((helper_islocal==0)) && option=''  # AUR
+    pactree -c${option} "${pkg}" 2>/dev/null
+    print_prompt "$(gettext 'Dependency tree displayed')." "" 1
+}
+
+#8
+pactree_reverse()
+{
+    declare pkg=$(print_enter "$(gettext 'Select a package')" "$(pacman -Qq)" )
+    (($?!=0)) && return 1
+    [ -z "$pkg" ] && return 1
+    declare ret=$(pactree -cr "${pkg}")
+    if (( "$(echo "${ret}" | wc -l)" >1 )); then
+        echo -e  "${ret}"
+        print_prompt "$(gettext 'Reverse dependency tree displayed')." "" 1
+    else
+        #((NOCLEAR)) || clear
+        declare p=$(printf "$(gettext 'Package "%s" not used by other package')." "$pkg")
+        print_prompt "$p"
+    fi
+}
+
+
+
+########   main    ########
+
+get_is_local
+get_options "$@"
+
+# set $PROMPT
+menu_calculate_size "$(gettext 'Enter a number between 0..%s and press [Enter] - 0 Exit Pacli')"
+
+main()
+{
+  declare arg="$1"
+  while true; do
+    menu_show "$screen_buffer"
+    choix="$(read_choice "$arg")"
+    arg=''
+    case $choix in
+        m)
+            #use menu fzf if set in paclirc
+            (("${PARAMS['menuex']}"==1)) && MENUEX=1
+            ;;
+        1)
+            echo
+            sudo pacman -Syu --color always
+            echo
+            print_hook
+            print_prompt "$(gettext 'Your system is updated')." "" 1
+            ;;
+        2)
+            echo
+            sudo pacman-mirrors -g && sudo pacman -Syy --color always
+            helper -Qdt
+            paccache -ruvk0
+            paccache -rvk2
+			
+			disk=$(lsblk -o "name,mountpoint" -pa | sed -n '/^\//h;/\/$/{g;p}' | cut -d/ -f3)
+			disk="${disk:0:3}"
+			if [[ -n "$disk" && -e "/dev/$disk" ]]; then
+                [[ $(cat $(find /sys -name 'rotational' 2>/dev/null | grep "$disk/queue")) == "1" ]] \
+                    && sudo pacman-optimize
+			fi
+			unset disk
+			
+			echo
+            print_hook
+            print_prompt "$(gettext 'System is updated and cache is cleaned')." "" 1
+			;;
+        3)
+            echo
+            pkg=($(print_enter "$(gettext 'Select packages to install (use TAB to toggle selection)')" \
+                "$(helper_listdesc)" '-m' ))
+            sudo pacman -S "${pkg[@]}" --color always
+            unset pkg
+            echo
+            print_hook
+            print_prompt "$(gettext 'Package installation is finished')." "" 1
+            ;;
+        4)
+            echo
+            pkg=($(print_enter "$(gettext 'Select packages to remove (use TAB to toggle selection)')" \
+                "$(pacman -Qq)" '-m' ))
+            (($?!=0)) && continue
+            [ -z "$pkg" ] && continue
+            sudo pacman -Rsn "${pkg[@]}" --color always
+            print_prompt "$(gettext 'Package and all unneeded dependencies removed')." "" 1
+            ;;
+        5)
+            ((NOCLEAR)) || clear
+            echo
+            package_information "$choix"
+            ;;
+        6)
+            echo
+            package_list_files "$choix"
+            ;;
+        7)
+            echo
+            pactree_run "$choix"
+            ;;
+        8)
+            echo
+            pactree_reverse "$choix"
+            ;;
+        9)
+            echo
+            sudo pacman-optimize
+            print_prompt "$(gettext 'Pacman Database defragmented and optimized for HDDs')." "" 1
+            ;;
+        10)
+            echo
+            help_text
+            echo
+            ;;
+        11)
+            echo
+            pkg=$(print_enter "$(gettext 'Select package to downgrade')" "$(pacman -Qq)" )
+            (($?!=0)) && continue
+            [ -z "$pkg" ] && continue
+            downgrade "${pkg}"
+            unset pkg
+            print_prompt "$(gettext 'Downgrade process finished')." "" 1
+            ;;
+        12)
+            echo
+			$(print_enter "$(gettext 'Enter one or more filter terms')" "$(tail -2000 /var/log/pacman.log)" '-m +s -q alpm --tac' ) >> /tmp/pacli-log			
+            ;;
+        13)
+            help_text $choix "${PARAMS['helpred']}" || continue
+            echo
+            fix_errors "$choix"
+            ;;
+        14)
+            help_text $choix "${PARAMS['helpred']}" || continue
+            echo
+            [[ -z "$EDITOR" ]] && EDITOR='nano'
+            sudo $EDITOR /etc/pacman.conf
+            ;;
+        15)
+            help_text $choix "${PARAMS['helpred']}" || continue
+            echo
+            pkg=$(print_enter "$(gettext 'Select package to install ')" "$(pacman -Slq)" )
+            (($?!=0)) && continue
+            [ -z "$pkg" ] && continue
+            sudo pacman -S --force "$pkg" --color always
+            unset pkg
+            print_prompt "$(gettext 'Package installation in force mode is finished')." "" 1
+            ;;
+        16)
+            help_text $choix "${PARAMS['helpred']}" || continue
+            echo
+            sudo pacman -Syu --force --color always
+            print_prompt "$(gettext 'Your system is updated in force mode')." "" 1
+            ;;
+        17)
+            help_text $choix "${PARAMS['helpred']}" || continue
+            echo
+            pkg=$(print_enter "$(gettext 'Select packages to remove')" "$(pacman -Qq)" )
+            (($?!=0)) && continue
+            [ -z "$pkg" ] && continue
+            sudo pacman -Rdd "$pkg" --color always
+            unset pkg
+            print_prompt "$(gettext 'Dependency in force mode removed')." "" 1
+            ;;
+        18)
+            help_text $choix "${PARAMS['helpred']}" || continue
+            echo
+            helper -Scc
+            print_prompt "$(gettext 'Entire package cache emptied')."
+            ;;
+        19)
+            echo
+            helper -Syua
+            print_prompt "$(gettext 'Your system is updated')." "" 1
+            ;;
+        20)
+            echo
+            helper -Syua && helper -Syua --devel --needed --noconfirm
+            print_prompt "$(gettext 'All AUR packages reinstalled')." "" 1
+            ;;
+        21)
+            if [[ "${PARAMS['helper']}" == 'pacaur' ]]; then
+                print_prompt "$(gettext 'not exist with pacaur ????')."
+                continue
+            fi
+            echo
+            echo "Enter name of package to be searched and installed from AUR and press [Enter] to continue"
+            echo
+            read package
+            [ -n "$package" ] && helper "$package"
+            unset $package
+            print_prompt "$(gettext 'AUR Helper finished')." "" 1
+            ;;
+        22)
+            echo
+            pkg=($(print_enter "$(gettext 'Select packages to install (toggle selection with TAB)')" \
+                "$(cat /tmp/packages)" '-m' ))
+            (($?!=0)) && continue
+            [ -z "$pkg" ] && continue
+            helper -S "${pkg[*]}"
+            unset pkg
+            print_prompt "$(gettext 'Installation from AUR finished')." "" 1
+            ;;
+        220)
+            echo
+            install_git_aur "$choix"
+            read
+            ;;
+        23)
+            echo
+            helper -Qem 
+            print_prompt "$(gettext 'All locally installed packages listed')." "" 1
+            ;;
+        24)
+            echo
+            helperrc_edit "$choix"
+            echo
+            ;;
+        100)
+            ((NOCLEAR)) || clear
+            echo
+            informations "$choix"
+            ;;
+        111)
+            ((NOCLEAR)) || clear
+            run_pacnews "$choix"
+            ;;
+        0)
+            clear && exit
+            ;;
+        '')
+            # cancel in menuEx
+            unset MENUEX
+            ((NOCLEAR)) || clear
+            ;;
+        *h)
+            # 4h or 5-h ?
+            if [[ "$choix" =~ "h" ]]; then
+                help_text $(echo "$choix" | grep -o "[0-9]*")
+                continue
+            fi
+            ;;
+        *)
+            printf "$RED %s $NC\n" "$(gettext 'Wrong option') $choix"
+            echo "$(gettext 'Wait and try again later...')"
+            echo
+            sleep 1
+            unset MENUEX
+            ((NOCLEAR)) || clear
+            ;;
+    esac
+  done
+}
+
+if [ "${BASH_SOURCE[0]}" == "$0" ]; then
+    load_packages_infos
+    #make home screen
+    declare -r screen_buffer=$(menu_load)
+    #loop menu
+    main "${1:-0}"
+fi

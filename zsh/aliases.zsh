@@ -58,8 +58,6 @@ alias tvim='nvr --remote-silent'
 alias nvim='NVIM_LISTEN_ADDRESS=/tmp/nvimsocket nvim'
 alias vim='nvim'
 alias svim="sudo vim" # Run vim as super user
-alias ac='echo "type-pass" ;/usr/bin/nvim ~/pfolder/p.cpt'
-alias imagemanager='run-geeqie'
 # TMUX
 #alias ta='tmux attach'
 alias ta='tmux att -t dka-tmux'
@@ -68,7 +66,6 @@ alias tkill='tmux kill-session -t dka-tmux'
 #alias emc="emacsclient -n" # no blocking terminal waiting for edit
 # running emacs in terminal wasnt working untill I put in .zprofile
 # export ALTERNATE_EDITOR=""
-alias emacs='emacs -nw'
 alias temacs='emacsclient -nw -t'
 #alias temacs='emacsclient -nw -c -a ""'
 alias gemacs='emacsclient -c'
@@ -77,13 +74,13 @@ alias xe='eval `slmenu < slmenu-progs`'
 #alias sxiv-all=sxiv ./*
 #alias bigtext=printf ''\e]710;%s\007' "xft:DejaVu Sans Mono:pixelsize=18"'
 #alias normaltext=printf ''\e]710;%s\007' "xft:DejaVu Sans Mono:pixelsize=14"'
-alias showalias='cat /home/dka/.zsh/aliases.zsh'
-alias @edit='edit-configs-and-scripts'
+alias showalias='cat ~/.zsh_alias'
+alias @edit='editconfigs'
 alias Edit='gvim'
 alias edit='urxvt -e nvim'
 #------- Edit config files
 cfg-bashrc() { $EDITOR ~/.bashrc ;}
-cfg-zsh_alias() { $EDITOR /home/dka/.zsh/aliases.zsh ;}
+cfg-zsh_alias() { $EDITOR ~/.zsh_alias ;}
 cfg-zsh_functions() { $EDITOR ~/.zsh_functions ;}
 cfg-bashfunctions() { $EDITOR ~/.bash_functions ;}
 cfg-keybindings() { $EDITOR ~/.config/sxhkd/sxhkdrc ;}
@@ -202,8 +199,8 @@ alias recent='find -maxdepth 1 -type f -mtime -1 -printf "%T@-%Tk:%TM - %f\n" | 
 ## Web-site alias ###
 alias youtube='chromium www.youtube.com'
 alias hotmail='chromium www.hotmail.co.uk && hm'
-alias hm='hm'
-alias cbhm='cbhm'
+#alias hm='hm'
+#alias cbhm='cbhm'
 alias movies='chromium www.imdb.com'
 alias watch='chromium http://veetle.com/index.php/listing'
 alias delayhm='sleep 10 ;hm'
@@ -213,3 +210,57 @@ alias events='estonta'
 alias -s txt=$EDITOR
 alias -s {avi,flv,mkv,mp4,mpeg,mpg,ogv,wmv}=$PLAYER
 alias -g NF='*(.om[1])' 		# newest file
+#TRANSMISSION from gotbletus alias file
+#-------- Transmission CLI v2 {{{
+#------------------------------------------------------
+# DEMO: http://www.youtube.com/watch?v=ee4XzWuapsE
+# DESC: lightweight torrent client; interface from cli, webui, ncurses, and gui
+# WEBUI:  http://localhost:9091/transmission/web/
+# 	  http://192.168.1.xxx:9091/transmission/web/
+
+tsm-clearcompleted() {
+  transmission-remote -l | grep 100% | grep Done | \
+  awk '{print $1}' | xargs -n 1 -I % transmission-remote -t % -r
+}
+
+# display numbers of ip being blocked by the blocklist (credit: smw from irc #transmission)
+tsm-count() {
+  echo "Blocklist rules:" $(curl -s --data \
+  '{"method": "session-get"}' localhost:9091/transmission/rpc -H \
+  "$(curl -s -D - localhost:9091/transmission/rpc | grep X-Transmission-Session-Id)" \
+  | cut -d: -f 11 | cut -d, -f1)
+}
+
+# DEMO: http://www.youtube.com/watch?v=TyDX50_dC0M
+# DESC: merge multiple ip blocklist into one
+# LINK: https://github.com/gotbletu/shownotes/blob/master/blocklist.sh
+tsm-blocklist() {
+  echo "${Red}>>>Stopping Transmission Daemon ${Color_Off}"
+    killall transmission-daemon
+  echo "${Yellow}>>>Updating Blocklist ${Color_Off}"
+    ~/.scripts/blocklist.sh
+  echo "${Red}>>>Restarting Transmission Daemon ${Color_Off}"
+    transmission-daemon
+    sleep 3
+  echo "${Green}>>>Numbers of IP Now Blocked ${Color_Off}"
+    tsm-count
+}
+tsm-altdownloadspeed() { transmission-remote --downlimit "${@:-900}" ;}	# download default to 900K, else enter your own
+tsm-altdownloadspeedunlimited() { transmission-remote --no-downlimit ;}
+tsm-limitupload() { transmission-remote --uplimit "${@:-10}" ;}	# upload default to 10kpbs, else enter your own
+tsm-limituploadunlimited() { transmission-remote --no-uplimit ;}
+tsm-askmorepeers() { transmission-remote -t"$1" --reannounce ;}
+tsm-daemon() { transmission-daemon ;}
+tsm-quit() { killall transmission-daemon ;}
+tsm-add() { transmission-remote --add "$1" ;}
+tsm-hash() { transmission-remote --add "magnet:?xt=urn:btih:$1" ;}       # adding via hash info
+tsm-verify() { transmission-remote --verify "$1" ;}
+tsm-pause() { transmission-remote -t"$1" --stop ;}		# <id> or all
+tsm-start() { transmission-remote -t"$1" --start ;}		# <id> or all
+tsm-purge() { transmission-remote -t"$1" --remove-and-delete ;} # delete data also
+tsm-remove() { transmission-remote -t"$1" --remove ;}		# leaves data alone
+tsm-info() { transmission-remote -t"$1" --info ;}
+tsm-speed() { while true;do clear; transmission-remote -t"$1" -i | grep Speed;sleep 1;done ;}
+tsm-grep() { transmission-remote --list | grep -i "$1" ;}
+tsm() { transmission-remote --list ;}
+tsm-show() { transmission-show "$1" ;}                          # show .torrent file information

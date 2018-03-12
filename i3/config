@@ -44,12 +44,12 @@ floating_modifier $win
 
 # startup apps and window decs
 # change it to default (wich is tiled) or stacking if you dont want tabbed
-workspace_layout default
+workspace_layout tabbed
 default_orientation horizontal
 focus_follows_mouse no
 # new window default border-get rid of the title bar except when 2 are tabbed together
 # you can have normal,1pixel or pixel 2 or pixel 3 for more than one pixel width
-new_window pixel 3
+new_window pixel 2
 # This would make a title bar only for a specific app
 #for_window [class="(?i)termite"] border normal 0
 # zenburn colors
@@ -64,28 +64,25 @@ set $near-black #1c1c1c
 set $green-gray #627C6B
 set $blue #6ca0a3
 set $blue_1 #4c7073
-set $green #42C134
-set $pastelgreen #7f9f7f
+set $green #7f9f7f
 set $cream #F5D7B4
 set $salmon #FFD29E
 set $orange #dfaf8f
 set $yellow #f0dfaf
 set $dark_pink #cc9393
 set $darkred #992828
-set $brownyred #6F4443
-set $mid-purple #9f56c8
 set $red #d64937
 set $transparent #0000000F
 # the bar tabs color is defined in the section at the bottom of this file under BAR
 #
 # window colours:         border      background    text     indicator
 #
-#   class                           border        background       text
-#client.focused                #999999 	  #999999 	      #111111
-client.focused                  #D65537     $green    #FDF9F9
-client.focused_inactive   #333333      $green          $near-white
-client.unfocused             #333333      $md-grey        #D8D8D8
-client.urgent                    #E12F2F      #8C5665          #999999
+#   class                 border       background    text
+#client.focused          #999999 	#999999 	#111111
+client.focused            #D65537     $green-gray     #FDF9F9
+client.focused_inactive   #333333      #323030     $near-white
+client.unfocused          #333333      $md-grey    #D8D8D8
+client.urgent             #E12F2F      #8C5665      #999999
 #
 # the green one client.focused        #0F0F0F #8abd57 #ffffff
 
@@ -105,9 +102,7 @@ client.urgent                    #E12F2F      #8C5665          #999999
 exec --no-startup-id /home/dka/.i3/i3autostart.sh &
 # start compositor, turned it off as not many apps show it, just say spacefm whenyou use the menu
 # exec --no-startup-id compton -b &
-exec --no-startup-id nm-applet &
-#exec --no-startup-id tdrop -a -w 1276 --height '65%' 'urxvt -e start-tmux'  &
-#exec --no-startup-id start-yeahconsole &
+#exec --no-startup-id nm-applet &
 #exec --no-startup-id yeahconsole &
 #exec --no-startup-id yeahconsole -e /home/dka/bin/start-tmux &
 #exec --no-startup-id volnoti &
@@ -115,9 +110,8 @@ exec --no-startup-id nm-applet &
 #exec --no-startup-id xsetroot -solid "2E3436"
 #use hsetroot to set the desktp background colour -you can also set a wallpaper with it.
 #exec --no-startup-id hsetroot -solid "#2E3436" &
-# Start Clipboard manager not using clipit now using clipmenu bash script
+# Start Clipboard manager
 #exec --no-startup-id clipit &
-exec --no-startup-id /home/dka/bin/clipmenud &
 #start the keybinding program
 exec --no-startup-id sxhkd &
 #exec --no-startup-id hsetroot -center /home/boo/IMAGES/wallpapers/zenburn-background-green.png
@@ -149,10 +143,11 @@ set $ws9 9
 ##============================================================================##
 # Window specific settings
 # Assign Windows:
-assign [class="Firefox"] $ws3
-assign [class="Chromium"] $ws3
 assign [class="Pale moon"] $ws3
+assign [class="Firefox"] $ws3
 assign [class="qutebrowser"] $ws3
+assign [class="Chromium"] $ws3
+assign [class="Google-chrome"] $ws3
 assign [class="Google-chrome-beta"] $ws3
 assign [class="^Geany"] $ws1
 #assign [class="^URxvt"] $ws5
@@ -174,15 +169,10 @@ for_window [instance="bar" window_role="task_dialog"] floating enable
 for_window [class="Chromium" window_role="browser"] border none
 # use focus command so that you get taken to the workspace it launches on
 for_window [class="Chromium"] focus 
-for_window [class="Pale moon"] focus
-for_window [class="Vlc"] floating enable
+for_window [class="Pale moon"] focus 
+for_window [class="qutebrowser"] focus 
 for_window [class="Spacefm"] focus 
 for_window [class="^URxvt"] floating enable
-#for_window [instance="start-tmux"] floating enable; resize shrink width 10000px; resize grow width 940px; resize shrink height 10000px; resize grow height 700px
-#for_window [instance="start-tmux"] floating enable; resize set 1000 700
-#for_window [instance="urxvtq"] floating enable; resize shrink width 10000px; resize grow width 940px; resize shrink height 10000px; resize grow height 700px;
-# start it at a certain location on screen 1st number is the x position (how far in  from left) and then y, how far down the screen
-for_window [instance="urxvtq"] move absolute position 0px 0px
 for_window [class="Doublecmd"] focus
 for_window [class="^Geany"] focus
 for_window [class="textadept"] focus
@@ -207,14 +197,14 @@ for_window [window_type="menu"] floating enable
 # to constrain floating window size width first then height
 # -1 means no constraint
 floating_minimum_size 75 x 20
-floating_maximum_size -1 x 740
+floating_maximum_size -1 x 780
 # floating_minimum_size 100 x 100
 # floating_maximum_size 1280 x 780
 #to get an app to appear in certain spot
 # for_window [class="Gsimplecal"] floating enable
 # for_window [class="Gsimplecal"] move absolute position 1189px 605px
 # where to show the app, first number is x is how far in from left of screen, y how far down
-#for_window [class="URxvt"] move absolute position 305px 184px
+for_window [class="URxvt"] move absolute position 305px 184px
 
 ##############################################################################
 #                              ***Keybindings  ***                           #
@@ -331,7 +321,6 @@ bindsym $win+Shift+asterisk move container to workspace $ws8
 bindsym $win+Shift+parenleft move container to workspace $ws9
 #bindsym $win+Shift+parenright move container to workspace 10
 #####################
-#=========FOCUS MODE type alt+x, then enter or escape to go back to normal mode
 mode "focused" {
     # focus keybindings
     bindsym i [class="^chromium$"] focus
@@ -350,7 +339,6 @@ bindsym $alt+x mode "focused"
 #move scratchpad - minimized out of sight
 #scratchpad show - restore - bring back to view
 #if theres more than one minimized, restore will cycle through them
-## A GENERAL SCRATCHPAD
 # Make the currently focused window a scratchpad (floating)
 bindsym $alt+Up move scratchpad
 # Use the floating toggle to remove an app from the scratchpad (W-f)
@@ -363,15 +351,13 @@ bindsym $win+g [class="Geany"] scratchpad show
 #Sometimes it would make sense to hard-code focusing on certain windows, ie not using scratchpad
 bindsym mod1+e [class="Spacefm"] focus
 bindsym mod1+g [class="Geany"] focus
-# TERMINAL SCRATCHPAD named popupterm
-exec --no-startup-id urxvt -name popupterm &
-for_window [instance="popupterm"] floating enable
-for_window [instance="popupterm"] resize set 625 400
-for_window [instance="popupterm"] move position center
-for_window [instance="popupterm"] move scratchpad
+# TERMINAL SCRATCHPAD named popuptmuxterm
+exec --no-startup-id urxvt -name popuptmuxterm -e /home/dka/bin/start-tmux &
+for_window [instance="popuptmuxterm"] floating enable
+for_window [instance="popuptmuxterm"] resize set 1200 840
+for_window [instance="popuptmuxterm"] move scratchpad
 #for_window [instance="popupterm"] move scratchpad; [instance="popupterm"] scratchpad show; move scratchpad
-bindsym $win+p		[instance="popupterm"] scratchpad show; move position center
-
+bindsym $win+p		[instance="popuptmuxterm"] scratchpad show; [instance="popuptmuxterm"] move position center
 # To move an app into a scratchpad on startup, could use it as a toggle terminal like
 #for_window [instance="__scratchpad"] move scratchpad 
 #but guy on internet said best to put command in a shell script so that you can delay the command, like the 2 lines below
@@ -384,8 +370,8 @@ bindsym $win+p		[instance="popupterm"] scratchpad show; move position center
 # so this is working best, alt t to show scratchpad terminal (floating) and press alt downarrow to make it go away.
 #bindsym $alt+t exec --no-startup-id  xdotool search "scratchpad" windowactivate &> /dev/null
 #bindsym $alt+t [class="URxvt"] scratchpad show; floating toggle
-# for_window [class="URxvt"] move absolute position 30px 25px
-# for_window [class="Gsimplecal"] move absolute position 40px 60px
+# for_window [class="URxvt"] move absolute position 1100px 700px
+# for_window [class="Gsimplecal"] move absolute position 1189px 605px
 
 # for use with the i3scratchpaddy  scripts
 # opens app if not already open and puts in scratch pad, press keys again to toggle
@@ -398,7 +384,7 @@ bindsym $win+p		[instance="popupterm"] scratchpad show; move position center
 #exec flock  ~/.i3/scratchpad/lockfile ~/.i3/scratchpad/perpetual_terminal.sh
 # the above script has the name scratchpad and the class URxvt
 #for_window [instance="^scratchpad$"] move scratchpad
-#for_window [instance="^scratchpad$"] move absolute position 40x 240x
+#for_window [instance="^scratchpad$"] move absolute position 640x 240x
 #using marks feature
 #bindsym $win+p [con_mark="term"] scratchpad show; floating toggle
 #for_window [instance="^scratchpad$"] mark "term", move scratchpad
@@ -438,16 +424,6 @@ bindsym $win+Shift+E exit
 #                               resize windows                               #
 ##############################################################################
 # resize window (you can also use the mouse for that)
-# These are from lukes setup you dont need to go into a mode then out again
-#Width shrink the amounts were all at 10 but I changed it to 20
-bindsym $win+Shift+y		resize shrink width 20 px or 20ppt
-#Height shrink
-bindsym $win+Shift+u		resize shrink height 20 px or 20 ppt
-#Increase height
-bindsym $win+Shift+i		resize grow height 20 px or 20 ppt
-#increase Width
-bindsym $win+Shift+o		resize grow width 20 px or 20 ppt
-##
 mode "resize" {
         # These bindings trigger as soon as you enter the resize mode
 
@@ -472,7 +448,6 @@ mode "resize" {
 }
 
 bindsym $win+r mode "resize"
-
 # Start on workspace 3, might need to use exec --no-startup-id,like
 #exec --no-startup-id i3-msg workspace 3
 #exec --no-startup-id "i3-msg 'workspace $WS3'"
@@ -505,11 +480,10 @@ bar {
                statusline #EDEDED
                separator #111111
                #separator #333333
-		       # WORKSPACE                | border  |  background    |   text     |
-               #------------------------------|------------|---------------------|------------|
-               focused_workspace           #38acd6 #203e4a #3fc0ef
-               #focused_workspace          #252525     $brownyred      $cream
-			   active_workspace              #252525     $brownyred      $cream
+		       # WORKSPACE                | border  |  background  |   text  |
+               #------------------------------|------------|--------------------|---------|
+               focused_workspace          #252525     $darkred        $cream
+			   active_workspace              #252525     $darkred        $cream
 			   inactive_workspace           #282828     #282828       $text-grey
 			   urgent_workspace             #ff0000      #313131        #000000
 			   

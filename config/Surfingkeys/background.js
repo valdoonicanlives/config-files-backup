@@ -22,7 +22,6 @@ var Service = (function() {
         focusAfterClosed: "right",
         repeatThreshold: 99,
         tabsMRUOrder: true,
-        historyMUOrder: true,
         newTabPosition: 'default',
         interceptedErrors: []
     };
@@ -101,19 +100,18 @@ var Service = (function() {
                 if (_message.repeats > conf.repeatThreshold) {
                     _message.repeats = conf.repeatThreshold;
                 }
-                // runtime.command from popup.js has _sender.tab undefined.
-                try {
-                    self[_message.action](_message, _sender, _sendResponse);
-                } catch (e) {
-                    console.log(_message.action + ": " + e);
-                }
+                self[_message.action](_message, _sender, _sendResponse);
             } else if (_message.toFrontend) {
-                if (frontEndPorts[tid]) {
+                try {
                     frontEndPorts[tid].postMessage(_message);
                     contentPorts[tid] = _port;
                     if (_message.ack) {
                         onResponseById[_message.id] = _sendResponse;
                     }
+                } catch (e) {
+                    chrome.tabs.executeScript(tid, {
+                        code: "createFrontEnd()"
+                    });
                 }
             } else if (_message.toContent) {
                 contentPorts[tid].postMessage(_message);
@@ -222,30 +220,11 @@ var Service = (function() {
             var config = {
                 mode: (proxyConf.proxyMode === "always" || proxyConf.proxyMode === "byhost") ? "pac_script" : proxyConf.proxyMode,
                 pacScript: {
-                    data: `var pacGlobal = {
-                        hosts: ${JSON.stringify(dictFromArray(proxyConf.autoproxy_hosts, 1))},
-                        autoproxy_pattern: '${autoproxy_pattern}',
-                        proxyMode: '${proxyConf.proxyMode}',
-                        proxy: '${proxyConf.proxy}'
-                    };
-                    function FindProxyForURL(url, host) {
-                        var lastPos;
-                        if (pacGlobal.proxyMode === "always") {
-                            return pacGlobal.proxy;
-                        }
-                        var pp = new RegExp(pacGlobal.autoproxy_pattern);
-                        do {
-                            if (pacGlobal.hosts.hasOwnProperty(host)) {
-                                return pacGlobal.proxy;
-                            }
-                            if (pacGlobal.autoproxy_pattern.length && pp.test(host)) {
-                                return pacGlobal.proxy;
-                            }
-                            lastPos = host.indexOf('.') + 1;
-                            host = host.slice(lastPos);
-                        } while (lastPos >= 1);
-                        return 'DIRECT';
-                    }`
+                    data: "var pacGlobal = {}; pacGlobal.hosts = " + JSON.stringify(dictFromArray(proxyConf.autoproxy_hosts, 1))
+                    + ", pacGlobal.autoproxy_pattern = '" + autoproxy_pattern
+                    + "', pacGlobal.proxyMode = '" + proxyConf.proxyMode
+                    + "', pacGlobal.proxy = '" + proxyConf.proxy + "'; "
+                    + FindProxyForURL.toString()
                 }
             };
             chrome.proxy.settings.set( {value: config, scope: 'regular'}, function() {
@@ -277,27 +256,14 @@ var Service = (function() {
 
     chrome.extension.onConnect.addListener(function(port) {
         var sender = port.sender;
-        if (sender.url === frontEndURL && sender.tab) {
+        if (sender.url === frontEndURL) {
             frontEndPorts[sender.tab.id] = port;
-            port.onDisconnect.addListener(function(port) {
-                delete frontEndPorts[port.sender.tab.id];
-            });
         }
         activePorts.push(port);
-        port.onMessage.addListener(function(message, port) {
-            return handleMessage(message, port.sender, function(resp) {
-                try {
-                    if (!port.isDisconnected) {
-                        port.postMessage(resp)
-                    }
-                } catch (e) {
-                    console.log(message.action + ": " + e);
-                    console.log(port);
-                }
-            }, port);
+        port.onMessage.addListener(function(message) {
+            return handleMessage(message, port.sender, port.postMessage.bind(port), port);
         });
         port.onDisconnect.addListener(function() {
-            port.isDisconnected = true;
             for (var i = 0; i < activePorts.length; i++) {
                 if (activePorts[i] === port) {
                     activePorts.splice(i, 1);
@@ -425,42 +391,17 @@ var Service = (function() {
         _updateSettings(diffSettings, afterSet);
     }
 
-    function _getDisabled(url, set, regex) {
-        if (regex) {
-            regex = new RegExp(regex.source, regex.flags);
-        }
-        return set.blacklist[url.origin]
-            || set.blacklist['.*']
-            || (regex && regex.test && regex.test(url.href));
-    }
     self.toggleBlacklist = function(message, sender, sendResponse) {
         loadSettings('blacklist', function(data) {
-            var origin = ".*";
-            if (sender.tab) {
-                origin = new URL(sender.tab.url).origin;
-            }
-            if (data.blacklist.hasOwnProperty(origin)) {
-                delete data.blacklist[origin];
+            if (data.blacklist.hasOwnProperty(message.domain)) {
+                delete data.blacklist[message.domain];
             } else {
-                data.blacklist[origin] = 1;
+                data.blacklist[message.domain] = 1;
             }
             _updateAndPostSettings({blacklist: data.blacklist}, function() {
                 _response(message, sendResponse, {
                     blacklist: data.blacklist
                 });
-            });
-            if (sender.tab) {
-                _response(message, sendResponse, {
-                    disabled: _getDisabled(new URL(sender.tab.url), data, message.blacklistPattern),
-                    url: origin
-                });
-            }
-        });
-    };
-    self.getDisabled = function(message, sender, sendResponse) {
-        loadSettings('blacklist', function(data) {
-            _response(message, sendResponse, {
-                disabled: _getDisabled(new URL(sender.tab.url), data, message.blacklistPattern)
             });
         });
     };
@@ -525,24 +466,14 @@ var Service = (function() {
             });
         })
     };
-    function _getHistory(cb) {
-        chrome.history.search({
-            startTime: 0,
-            maxResults: 2147483647,
-            text: ""
-        }, function(tree) {
-            if (conf.historyMUOrder) {
-                tree = tree.sort(function(a, b) {
-                    return b.visitCount - a.visitCount;
-                });
-            }
-            cb(tree);
-        });
-    }
     self.getAllURLs = function(message, sender, sendResponse) {
         chrome.bookmarks.getRecent(2147483647, function(tree) {
             var urls = tree;
-            _getHistory(function(tree) {
+            chrome.history.search({
+                startTime: 0,
+                maxResults: 2147483647,
+                text: ""
+            }, function(tree) {
                 urls = urls.concat(tree);
                 _response(message, sendResponse, {
                     urls: urls
@@ -552,7 +483,9 @@ var Service = (function() {
     };
     self.getTabs = function(message, sender, sendResponse) {
         var tab = sender.tab;
-        var queryInfo = message.queryInfo || {};
+        var queryInfo = message.queryInfo || {
+            windowId: tab.windowId
+        };
         chrome.tabs.query(queryInfo, function(tabs) {
             tabs = _filterByTitleOrUrl(tabs, message.query);
             if (message.query && message.query.length) {
@@ -581,32 +514,18 @@ var Service = (function() {
         });
     };
     self.focusTab = function(message, sender, sendResponse) {
-        if (message.window_id !== undefined && sender.tab.windowId !== message.window_id) {
-            chrome.windows.update(message.window_id, {
-                focused: true
-            }, function() {
-                chrome.tabs.update(message.tab_id, {
-                    active: true
-                });
-            });
-        } else {
-            chrome.tabs.update(message.tab_id, {
-                active: true
-            });
-        }
+        chrome.tabs.update(message.tab_id, {
+            active: true
+        });
     };
     self.historyTab = function(message, sender, sendResponse) {
         if (tabHistory.length > 0) {
             historyTabAction = true;
-            if (message.hasOwnProperty("index")) {
-                tabHistoryIndex = (parseInt(message.index) + tabHistory.length) % tabHistory.length;
-            } else {
-                tabHistoryIndex += message.backward ? -1 : 1;
-                if (tabHistoryIndex < 0) {
-                    tabHistoryIndex = 0;
-                } else if (tabHistoryIndex >= tabHistory.length) {
-                    tabHistoryIndex = tabHistory.length - 1;
-                }
+            tabHistoryIndex += message.backward ? -1 : 1;
+            if (tabHistoryIndex < 0) {
+                tabHistoryIndex = 0;
+            } else if (tabHistoryIndex >= tabHistory.length) {
+                tabHistoryIndex = tabHistory.length - 1;
             }
             var tab_id = tabHistory[tabHistoryIndex];
             chrome.tabs.update(tab_id, {
@@ -681,23 +600,6 @@ var Service = (function() {
             });
         });
     };
-
-    function _closeTab(s, n) {
-        chrome.tabs.query({currentWindow: true}, function(tabs) {
-            tabs = tabs.map(function(e) { return e.id; });
-            chrome.tabs.remove(tabs.slice(s.tab.index + (n < 0 ? n : 1),
-                                          s.tab.index + (n < 0 ? 0 : 1 + n)));
-        });
-    };
-
-    self.closeTabLeft  = function(message, sender, senderResponse) { _closeTab(sender, -message.repeats)};
-    self.closeTabRight = function(message, sender, senderResponse) { _closeTab(sender, message.repeats); };
-    self.closeTabsToLeft = function(message, sender, senderResponse) { _closeTab(sender, -sender.tab.index); };
-    self.closeTabsToRight = function(message, sender, senderResponse) {
-        chrome.tabs.query({currentWindow: true},
-                          function(tabs) { _closeTab(sender, tabs.length - sender.tab.index); });
-    };
-
     self.muteTab = function(message, sender, sendResponse) {
         var tab = sender.tab;
         chrome.tabs.update(tab.id, {
@@ -779,7 +681,8 @@ var Service = (function() {
         }
     };
     self.getHistory = function(message, sender, sendResponse) {
-        _getHistory(function(tree) {
+        message.query.maxResults = 2147483647;
+        chrome.history.search(message.query, function(tree) {
             _response(message, sendResponse, {
                 history: tree
             });
@@ -1017,12 +920,25 @@ var Service = (function() {
             urls: tabURL
         });
     };
-    self.getTopURL = function(message, sender, sendResponse) {
-        _response(message, sendResponse, {
-            url: sender.tab ? sender.tab.url : ""
-        });
-    };
 
+    function FindProxyForURL(url, host) {
+        var lastPos;
+        if (pacGlobal.proxyMode === "always") {
+            return pacGlobal.proxy;
+        }
+        var pp = new RegExp(pacGlobal.autoproxy_pattern);
+        do {
+            if (pacGlobal.hosts.hasOwnProperty(host)) {
+                return pacGlobal.proxy;
+            }
+            if (pacGlobal.autoproxy_pattern.length && pp.test(host)) {
+                return pacGlobal.proxy;
+            }
+            lastPos = host.indexOf('.') + 1;
+            host = host.slice(lastPos);
+        } while (lastPos >= 1);
+        return 'DIRECT';
+    }
     self.updateProxy = function(message, sender, sendResponse) {
         loadSettings(['proxyMode', 'proxy', 'autoproxy_hosts'], function(proxyConf) {
             if (message.proxy) {
@@ -1053,14 +969,12 @@ var Service = (function() {
                 }
                 proxyConf.autoproxy_hosts = Object.keys(hostsDict);
             }
-            var diffSet = {
+            _updateSettings({
                 autoproxy_hosts: proxyConf.autoproxy_hosts,
                 proxyMode: proxyConf.proxyMode,
                 proxy: proxyConf.proxy
-            };
-            _updateAndPostSettings(diffSet);
+            });
             _applyProxySettings(proxyConf);
-            _response(message, sendResponse, diffSet);
         });
     };
     self.setZoom = function(message, sender, sendResponse) {
@@ -1081,14 +995,7 @@ var Service = (function() {
         } else if (type === 'H') {
             chrome.history.deleteUrl({url: uid}, cb);
         } else if (type === 'T') {
-            uid = uid.split(":").map(function(u) {
-                return parseInt(u);
-            });
-            chrome.windows.update(uid[0], {
-                focused: true
-            }, function() {
-                chrome.tabs.remove(uid[1], cb);
-            });
+            chrome.tabs.remove(parseInt(uid), cb);
         } else if (type === 'M') {
             loadSettings('marks', function(data) {
                 delete data.marks[uid];
@@ -1158,23 +1065,6 @@ var Service = (function() {
         };
         chrome.tabs.captureVisibleTab(null, {format: "png"}, function(dataUrl) {
             img.src = dataUrl;
-        });
-    };
-    self.deleteHistoryOlderThan = function(message, sender, sendResponse) {
-        var days = message.days || 0, hours = message.hours || 0;
-        chrome.history.deleteRange({
-            startTime: 0,
-            endTime: new Date().getTime() - (days * 86400 + hours * 3600) * 1000
-        }, function() {
-        });
-    };
-    self.removeBookmark = function(message, sender, sendResponse) {
-        chrome.bookmarks.search({
-            url: sender.tab.url
-        }, function(bookmarks) {
-            bookmarks.forEach(function(b) {
-                chrome.bookmarks.remove(b.id);
-            });
         });
     };
 

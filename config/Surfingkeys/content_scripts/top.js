@@ -9,6 +9,10 @@ var TopHook = (function(mode) {
         }, 0);
     });
 
+    self.enter = function(priority) {
+        mode.enter.call(self, priority);
+    };
+
     self.addEventListener('mousedown', function(event) {
         self.exit();
     });
@@ -29,8 +33,6 @@ TopHook.enter(9999);
 var frontendFrame = (function() {
     var self = {};
     var uiHost = document.createElement("div");
-    uiHost.style.display = "block";
-    uiHost.style.opacity = 1;
     var frontEndURL = chrome.runtime.getURL('pages/frontend.html');
     var ifr = $('<iframe allowtransparency=true frameborder=0 scrolling=no class=sk_ui src="{0}" />'.format(frontEndURL));
     uiHost.createShadowRoot();
@@ -48,27 +50,14 @@ var frontendFrame = (function() {
         $(document).trigger("surfingkeys:frontendReady");
     }
 
-    var lastStateOfPointerEvents = "none";
     self.setFrontFrame = function(response) {
-        if (ifr[0].getBoundingClientRect().top) {
-            // test with https://carlosbecker.com/posts/production-code-coverage-jacoco/
-            ifr.css('top', document.body.scrollTop);
-        }
         ifr.css('height', response.frameHeight);
         if (response.pointerEvents) {
             ifr.css('pointer-events', response.pointerEvents);
         }
-        if (response.pointerEvents === "none") {
+        if (response.hostBlur) {
             uiHost.blur();
-            // test with https://docs.google.com/ and https://web.whatsapp.com/
-            if (lastStateOfPointerEvents !== response.pointerEvents) {
-                runtime.command({
-                    action: 'getBackFocus',
-                    toContent: true
-                });
-            }
         }
-        lastStateOfPointerEvents = response.pointerEvents;
     };
     self.create = function() {
         ifr[0].channel = new MessageChannel();
@@ -116,9 +105,6 @@ document.addEventListener('DOMContentLoaded', function(e) {
     }, 0);
 });
 function createFrontEnd() {
-    if (!frontendFrame) {
-        return;
-    }
     var frontendReady = frontendFrame.contentWindow && frontendFrame.contentWindow.top === top;
     if (!frontendReady) {
         if (!document.body) {

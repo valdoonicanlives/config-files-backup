@@ -4,8 +4,10 @@
 #
 # timestamps
 #HIST_STAMPS=mm/dd/yyyy
-
+setxkbmap -model microsoft -layout gb
 #paths
+
+path=(. $path /bin ~/bin /home/dka/.local/bin /home/dka/.scripts /home/dka/mygits/kodi-playercorefactory/bash-scripts /usr/lib/surfraw  /home/dka/.gem/ruby/2.4.0/bin /home/dka/wmtls)
 #export PATH=$HOME/bin:/usr/local/bin:/home/dka/.scripts:/home/dka/mygits/kodi-playercorefactory/bash-scripts:/home/dka/.gem/ruby/2.2.0/bin:$PATH
 #export MANPATH=/usr/local/man:$MANPATH
 
@@ -30,6 +32,17 @@ export PLAYER=$(find_alt mplayer mpv cvlc $OPENER )
 export READER=$(find_alt mupdf zathura evince $OPENER )
 export ROOTER=$(find_alt gksudo kdesudo )
 export IMAGEVIEWER=$(find_alt sxviv feh display eog $OPENER )
+
+#some other exports
+# Used by ranger. Note that ranger doesn't handle absolute pathes.
+export TERMCMD="urxvt"
+
+# Used by mimeopen when launching applications with Terminal=true:
+export TERMINAL="urxvt -e"
+
+#for zim wiki
+export ZIM_CRYPT='~/.Zimnotes'
+export ZIM_MOUNT='~/Zimnotes'
 
 # Treat single word simple commands without redirection as candidates for resumption of an existing job.
 setopt AUTO_RESUME

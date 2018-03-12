@@ -1,10 +1,5 @@
 var Front = (function(mode) {
-    var self = $.extend({
-        name: "Front",
-        frontendOnly: true,
-        eventListeners: {},
-        ports: {}
-    }, mode);
+    var self = $.extend({name: "Front", eventListeners: {}, ports: {}}, mode);
 
     // this object is implementation of UI, it's UI provider
     self.isProvider = function() {
@@ -49,8 +44,7 @@ var Front = (function(mode) {
                     _tabs.trie = null;
                 } else if (_tabs.trie.meta) {
                     RUNTIME('focusTab', {
-                        tab_id: _tabs.trie.meta.id,
-                        window_id: _tabs.trie.meta.windowId
+                        tab_id: _tabs.trie.meta
                     });
                     self.hidePopup();
                     _tabs.trie = null;
@@ -61,40 +55,29 @@ var Front = (function(mode) {
     });
 
     self.postMessage = function(to, message) {
-        if (self.ports[to]) {
-            self.ports[to].postMessage(message);
-        }
+        self.ports[to].postMessage(message);
     };
-    self.flush = function() {
-        var visibleDivs = $('body>div:visible').toArray();
-        var pointerEvents = visibleDivs.map(function(d) {
-            var id = $(d).attr('id');
-            var divNoPointerEvents = ["sk_keystroke", "sk_richKeystroke", "sk_bubble", "sk_banner", "sk_frame"];
-            if (divNoPointerEvents.indexOf(id) !== -1) {
-                // no pointerEvents for bubble
-                return false;
-            } else if (id === "sk_status") {
-                // only pointerEvents when input in statusBar
-                return $('#sk_status').find('input').length > 0;
-            } else {
-                // with pointerEvents for all other DIVs
-                return true;
-            }
-        });
-        // to make pointerEvents not empty
-        pointerEvents.push(false);
-        pointerEvents = pointerEvents.reduce(function(a, b) {
-            return a || b;
-        });
-        if (pointerEvents) {
-            window.focus();
-            var input = $('#sk_status').find('input').length ? $('#sk_status').find('input') : Omnibar.input;
-            input.focus();
+    /*
+     * set attributes of frame element in top window
+     *      pointerEvents   whether the iframe can be target of mouse events
+     *      hostBlur        whether to blur from the iframe
+     *
+     */
+    self.flush = function(pointerEvents, hostBlur) {
+        var height;
+        if ($('body>div:visible').length > 0) {
+            height = '100%';
+            pointerEvents = 'all';
+        } else {
+            height = '0px';
+            // blur host anyway if height is 0px
+            hostBlur = true;
         }
         self.postMessage('top', {
             action: 'setFrontFrame',
-            pointerEvents: pointerEvents ? "all" : "none",
-            frameHeight: visibleDivs.length > 0 ? "100%" : "0px"
+            pointerEvents: pointerEvents,
+            hostBlur: hostBlur,
+            frameHeight: height
         });
     };
     self.visualCommand = function(args) {
@@ -113,19 +96,21 @@ var Front = (function(mode) {
     var _usage = $('<div id=sk_usage class=sk_theme>').appendTo('body').hide();
     var _popup = $('<div id=sk_popup class=sk_theme>').appendTo('body').hide();
     var _editor = $('<div id=sk_editor>').appendTo('body').hide();
-    var _tabs = $("<div id=sk_tabs><div class=sk_tabs_fg></div><div class=sk_tabs_bg></div></div>").appendTo('body').hide();
+    var _tabs = $("<div class=sk_tabs><div class=sk_tabs_fg></div><div class=sk_tabs_bg></div></div>").appendTo('body').hide();
     var banner = $('<div id=sk_banner class=sk_theme>').appendTo('body').hide();
-    var _bubble = $("<div id=sk_bubble>").html("<div class=sk_bubble_content></div>").appendTo('body').hide();
-    $("<div class=sk_arrow>").html("<div></div><div></div>").css('position', 'absolute').css('top', '100%').appendTo(_bubble);
+    var _bubble = $("<div class=sk_bubble>").html("<div class=sk_bubble_content></div>").appendTo('body').hide();
+    $("<div class=sk_arrow>").html("<div class=sk_arrowdown></div><div class=sk_arrowdown_inner></div>").css('position', 'absolute').css('top', '100%').appendTo(_bubble);
     var keystroke = $('<div id=sk_keystroke class=sk_theme>').appendTo('body').hide();
-    var _richKeystroke = $('<div id=sk_richKeystroke class=sk_theme>').appendTo('body').hide();
 
     var _display;
     self.hidePopup = function() {
         if (_display && _display.is(':visible')) {
             _display.hide();
-            self.flush();
+            self.flush("none", true);
             _display.onHide && _display.onHide();
+            self.contentCommand({
+                action: 'getFocusFromFront'
+            });
             self.showPressed = false;
             self.exit();
         }
@@ -138,7 +123,7 @@ var Front = (function(mode) {
         }
         _display = td;
         _display.show();
-        self.flush();
+        self.flush("all", false);
         _display.onShow && _display.onShow(args);
         if (_editor !== td) {
             // don't set focus for editor, as it may lead frontend.html hold focus.
@@ -165,7 +150,7 @@ var Front = (function(mode) {
         var tabstr = "<div class=sk_tab style='max-width: {0}px'>".format(window.innerWidth - 50);
         var items = tabs.forEach(function(t, i) {
             var tab = $(tabstr);
-            _tabs.trie.add(hintLabels[i].toLowerCase(), t);
+            _tabs.trie.add(hintLabels[i].toLowerCase(), t.id);
             tab.html("<div class=sk_tab_hint>{0}</div><div class=sk_tab_wrap><div class=sk_tab_icon><img src='{1}'></div><div class=sk_tab_title>{2}</div></div>".format(hintLabels[i], t.favIconUrl, htmlEncode(t.title)));
             tab.data('url', t.url);
             tabs_fg.append(tab);
@@ -188,30 +173,6 @@ var Front = (function(mode) {
         });
     };
     runtime.on('chooseTab', self.chooseTab);
-
-    function _initL10n(cb) {
-        var lang = runtime.conf.language || window.navigator.language;
-        if (lang === "en-US") {
-            cb(function(str) {
-                return str;
-            });
-        } else {
-            fetch(chrome.extension.getURL("pages/l10n.json")).then(function(res) {
-                return res.json();
-            }).then(function(l10n) {
-                if (typeof(l10n[lang]) === "object") {
-                    l10n = l10n[lang];
-                    cb(function(str) {
-                        return l10n[str] ? l10n[str] : str;
-                    })
-                } else {
-                    cb(function(str) {
-                        return str;
-                    });
-                }
-            });
-        }
-    }
 
     var callbacks = {};
     self.topCommand = function(args, cb) {
@@ -240,40 +201,36 @@ var Front = (function(mode) {
             'Proxy',                 // 13
             'Misc',                  // 14
             'Insert Mode',           // 15
+            'Omnibar Mode',          // 16
         ];
         var holder = $('<div/>');
         var help_groups = feature_groups.map(function(){return [];});
-
-        _initL10n(function(locale) {
-            help_groups[0].push("<div><span class=kbd-span><kbd>&lt;Alt-s&gt;</kbd></span><span class=annotation>{0}</span></div>".format(locale("Toggle SurfingKeys on current site")));
-
-            [ Normal.mappings,
-                Visual.mappings,
-                Insert.mappings,
-                Omnibar.mappings
-            ].map(function(mappings) {
-                var words = mappings.getWords();
-                for (var i = 0; i < words.length; i++) {
-                    var w = words[i];
-                    var meta = mappings.find(w).meta;
-                    w = decodeKeystroke(w);
-                    if (meta.annotation.length) {
-                        var item = "<div><span class=kbd-span><kbd>{0}</kbd></span><span class=annotation>{1}</span></div>".format(htmlEncode(w), locale(meta.annotation));
-                        help_groups[meta.feature_group].push(item);
-                    }
+        [ Normal.mappings,
+            Visual.mappings,
+            Insert.mappings,
+            Omnibar.mappings
+        ].map(function(mappings) {
+            var words = mappings.getWords();
+            for (var i = 0; i < words.length; i++) {
+                var w = words[i];
+                var meta = mappings.find(w).meta;
+                w = decodeKeystroke(w);
+                if (meta.annotation.length) {
+                    var item = "<div><span class=kbd-span><kbd>{0}</kbd></span><span class=annotation>{1}</span></div>".format(htmlEncode(w), meta.annotation);
+                    help_groups[meta.feature_group].push(item);
                 }
-            });
-            help_groups = help_groups.map(function(g, i) {
-                if (g.length) {
-                    return "<div><div class=feature_name><span>{0}</span></div>{1}</div>".format(locale(feature_groups[i]), g.join(''));
-                } else {
-                    return "";
-                }
-            }).join("");
-            $(help_groups).appendTo(holder);
-            $("<p style='float:right; width:100%; text-align:right'>").html("<a href='https://github.com/brookhong/surfingkeys' target='_blank' style='color:#0095dd'>{0}</a>".format(locale("More help"))).appendTo(holder);
-            _usage.html(holder.html());
+            }
         });
+        help_groups = help_groups.map(function(g, i) {
+            if (g.length) {
+                return "<div><div class=feature_name><span>{0}</span></div>{1}</div>".format(feature_groups[i], g.join(''));
+            } else {
+                return "";
+            }
+        }).join("");
+        $(help_groups).appendTo(holder);
+        $("<p style='float:right; width:100%; text-align:right'>").html("<a href='https://github.com/brookhong/surfingkeys' target='_blank' style='color:#0095dd'>More help</a>").appendTo(holder);
+        _usage.html(holder.html());
     };
 
     runtime.on('showUsage', function(message) {
@@ -311,12 +268,9 @@ var Front = (function(mode) {
             });
         }
     };
-    self.showEditor = function(element, cb) {
-        self.hidePopup();
-        self.onEditorSaved = cb;
-        setTimeout(function() {
-            showPopup(_editor, element);
-        }, 10);
+    self.showEditor = function() {
+        _popup.html("Not supported.");
+        showPopup(_popup);
     };
     runtime.on('showEditor', function(message) {
         showPopup(_editor, message);
@@ -355,10 +309,10 @@ var Front = (function(mode) {
         var pos = message.position;
         _bubble.find('div.sk_bubble_content').html(message.content);
         _bubble.show();
-        self.flush();
+        self.flush("none", true);
         var w = _bubble.width(),
             h = _bubble.height();
-        var left = [pos.left - 11 - w / 2, w / 2];
+        var left = [pos.left - w / 2, w / 2];
         if (left[0] < 0) {
             left[1] += left[0];
             left[0] = 0;
@@ -366,17 +320,8 @@ var Front = (function(mode) {
             left[1] += left[0] - window.innerWidth + w;
             left[0] = window.innerWidth - w;
         }
-        var arrow = _bubble.find('div.sk_arrow');
-        if (pos.top - h - 12 >= 0) {
-            arrow.attr('dir', 'down');
-            arrow.css('top', '100%');
-            _bubble.css('top', pos.top - h - pos.height - 12).css('left', left[0]);
-        } else {
-            arrow.attr('dir', 'up');
-            arrow.css('top', -12);
-            _bubble.css('top', pos.top + pos.height + 12).css('left', left[0]);
-        }
-        arrow.css('left', left[1]);
+        _bubble.find('div.sk_arrow').css('left', left[1]);
+        _bubble.css('top', pos.top - h - 12).css('left', left[0]);
     });
     self.hideBubble = function() {
         _bubble.hide();
@@ -393,11 +338,6 @@ var Front = (function(mode) {
     runtime.on('showStatus', function(message) {
         self.showStatus(message.position, message.content, message.duration);
     });
-
-    self.toggleStatus = function(message) {
-        self.statusBar.toggle();
-    };
-    runtime.on('toggleStatus', self.toggleStatus);
 
     var clipboard_holder = $('<textarea id=sk_clipboard/>');
     clipboard_holder = clipboard_holder[0];
@@ -432,65 +372,32 @@ var Front = (function(mode) {
     runtime.on('writeClipboard', function(message) {
         self.writeClipboard(message.content);
     });
-    var _key = "";
     self.hideKeystroke = function() {
-        if (runtime.conf.richHintsForKeystroke) {
-            _richKeystroke.hide();
-            _key = "";
+        keystroke.animate({
+            right: "-2rem"
+        }, 300, function() {
+            keystroke.html("");
+            keystroke.hide();
             self.flush();
-        } else {
-            keystroke.animate({
-                right: "-2rem"
-            }, 300, function() {
-                keystroke.html("");
-                keystroke.hide();
-                self.flush();
-            });
-        }
+        });
     };
     runtime.on('hideKeystroke', self.hideKeystroke);
-    Visual.mappings.add("y", {
-        annotation: "Yank a word(w) or line(l) or sentence(s) or paragraph(p)",
-        feature_group: 9
-    });
-    self.showKeystroke = function(key, mode) {
-        if (runtime.conf.richHintsForKeystroke) {
-            _initL10n(function(locale) {
-                _key += key;
-                var root = window[mode].mappings.find(_key), words = _key;
-                if (root) {
-                    words = root.getWords("", true).sort().map(function(w) {
-                        var meta = root.find(w).meta;
-                        if (meta.annotation || mode !== "Normal") {
-                            return "<div><span class=kbd-span><kbd>{0}<span class=candidates>{1}</span></kbd></span><span class=annotation>{2}</span></div>".format(_key, w, locale(meta.annotation));
-                        } else {
-                            return "";
-                        }
-                    }).join("");
-                    if (words.length === 0) {
-                        words = _key;
-                    }
-                }
-                _richKeystroke.html(words).show();
-                self.flush();
-            });
-        } else {
-            if (keystroke.is(':animated')) {
-                keystroke.finish()
-            }
-            keystroke.show();
-            self.flush();
-            var keys = keystroke.html() + key;
-            keystroke.html(htmlEncode(keys));
-            if (keystroke.css('right') !== '0px') {
-                keystroke.animate({
-                    right: 0
-                }, 300);
-            }
+    self.showKeystroke = function(key) {
+        if (keystroke.is(':animated')) {
+            keystroke.finish()
+        }
+        keystroke.show();
+        self.flush();
+        var keys = keystroke.html() + key;
+        keystroke.html(htmlEncode(keys));
+        if (keystroke.css('right') !== '0px') {
+            keystroke.animate({
+                right: 0
+            }, 300);
         }
     };
     runtime.on('showKeystroke', function(message) {
-        self.showKeystroke(message.key, message.mode);
+        self.showKeystroke(message.key);
     });
 
     self.initPort = function(message) {

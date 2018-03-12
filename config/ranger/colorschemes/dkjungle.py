@@ -14,5 +14,5 @@ class Scheme(Default):
 
         if context.in_titlebar and context.hostname:
             fg = red if context.bad else blue
-#The ending line of a theme
+
         return fg, bg, attr

@@ -1,0 +1,10 @@
+g:skybison_fuzz	skybison.txt	/*g:skybison_fuzz*
+g:skybison_input	skybison.txt	/*g:skybison_input*
+g:skybison_numberselect	skybison.txt	/*g:skybison_numberselect*
+skybison-changelog	skybison.txt	/*skybison-changelog*
+skybison-intro	skybison.txt	/*skybison-intro*
+skybison-miscellaneous	skybison.txt	/*skybison-miscellaneous*
+skybison-options	skybison.txt	/*skybison-options*
+skybison-setup	skybison.txt	/*skybison-setup*
+skybison-usage	skybison.txt	/*skybison-usage*
+skybison.txt	skybison.txt	/*skybison.txt*

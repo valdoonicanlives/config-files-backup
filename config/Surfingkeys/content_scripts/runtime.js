@@ -5,34 +5,21 @@ var runtime = window.runtime || (function() {
             // local part from settings
             useLocalMarkdownAPI: true,
             focusOnSaved: true,
-            omnibarMaxResults: 10,
+            omnibarMaxResults: 20,
             tabsThreshold: 9,
             hintsThreshold: 10000,
             smoothScroll: true,
-            modeAfterYank: "",
+            collapseAfterYank: true,
             scrollStepSize: 70,
-            nextLinkRegex: /(\b(下页|下一页|next)\b)|>>/i,
-            prevLinkRegex: /(\b(上页|上一页|prev|previous)\b)|<</i,
-            clickablePat: /(https?|thunder|magnet):\/\/\S+/ig,
+            nextLinkRegex: /((>>|next)+)/i,
+            prevLinkRegex: /((<<|prev(ious)?)+)/i,
             hintAlign: "center",
             defaultSearchEngine: "g",
-            showModeStatus: false,
-            showProxyInStatusBar: false,
-            richHintsForKeystroke: true,
-            smartPageBoundary: true,
-            clickableSelector: "",
             blacklistPattern: undefined,
-            startToShowEmoji: 2,
-            language: undefined,
-            stealFocusOnLoad: true,
             lastQuery: ""
         },
         runtime_handlers: {}
     }, actions = {};
-    if (!chrome.runtime.connect) {
-        return self;
-    }
-
     var _port = chrome.runtime.connect({
         name: 'main'
     });

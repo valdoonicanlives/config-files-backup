@@ -4,24 +4,18 @@
 # ░▓ mirror ▓ http://git.io/.files
 # ░▓▓▓▓▓▓▓▓▓▓
 # ░░░░░░░░░░
-#
+# just added this
 #█▓▒░ load configs
 for config (~/.zsh/*.zsh) source $config
 # The above lines are all that are in xeros default .zshrc I added below DK ########
 ##################
 # finaly this one below works and scripts can run from ~/bin without typing the full path
-path=(. $path /bin ~/bin /home/dka/.scripts /home/dka/mygits/kodi-playercorefactory/bash-scripts /usr/lib/surfraw  /home/dka/.gem/ruby/2.4.0/bin /home/dka/wmtls)
+path=(. $path /bin ~/bin /home/dka/.scripts /home/dka/mygits/kodi-playercorefactory/bash-scripts)
 #my added
 # this is from .zim to try and get green color when the command is correct
 # nope below line on its own in not enough
 #zstyle ':completion:*:corrections' format ' %F{green}-- %d (errors: %e) --%f'
-# if we don't set $SHELL then aterm, rxvt,.. will use /bin/sh or /bin/bash :-/
-if [[ -z "$SHELL" ]] ; then
-  SHELL="$(which zsh)"
-  if [[ -x "$SHELL" ]] ; then
-    export SHELL
-  fi
-fi
+
 # From Gotbletus .zshrc
 #-------- Prompt {{{
 #------------------------------------------------------
@@ -29,7 +23,6 @@ fi
 
 autoload -U promptinit && promptinit
 prompt fade    # set prompt theme (for listing: $ prompt -p)
-#
 # }}}
 #-------- History {{{
 #------------------------------------------------------
@@ -151,26 +144,11 @@ On_IWhite='\e[0;107m'   # White
 
 # }}}
 # end of the from gotbleus .zshrc #----------------
-
 alias goto=". goto"
-# for fasd
-if which fasd >/dev/null; then
-  eval "$(fasd --init auto)"	# get fasd working, initialization code
-   # open with external programs
-  # alias m="f -e mpv"		# open with video player, commented out as it interferes with m the music play script
-  # alias o="a -e $OPENER"		# open any file
-  alias v="f -e $EDITOR"		# open with text editor
-fi
 # SOURCE THESE FILES
-. ~/.zsh_functions
 . ~/z.sh
 . /home/dka/.jrc
 [ -f ~/.fzf.zsh ] && source ~/.fzf.zsh
 # finaly this is what gives you command completion- shows if the command is correct or not
 # Have put the source line in /home/dka/.zsh/syntax.zsh     now
 # source /home/dka/mygits/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh
-# below to use zaw a bit like fzf but integrates with zsh and has sort of plugins to use alias
-# https://github.com/zsh-users/zaw
-source /home/dka/mygits/zaw/zaw.zsh
-source ~/.scripts/bashpast.sh
-

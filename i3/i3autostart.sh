@@ -20,10 +20,9 @@ wait_for_program () {
 	[ $c -eq 15 ] && i3-nagbar -m "Error on executing $0 script"
 }
 
-# /home/dka/bin/urxvtc -name urxvtq -e /home/dka/bin/start-tmux &
-/home/dka/bin/urxvtc -name urxvtq -geometry 140x34 -e /home/dka/bin/start-tmux &
-sleep 1
-devilspie -a &
+# /home/dka/bin/clipmenud &
+# trying greenclip now
+/home/dka/bin/greenclip daemon &
 sleep 6
 conky &
 exit

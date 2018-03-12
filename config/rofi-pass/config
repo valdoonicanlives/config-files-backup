@@ -1,0 +1,12 @@
+## Programs to be used
+# Editor
+EDITOR='geany -f'
+
+# Browser
+BROWSER='palemoon'
+
+
+# rofi-pass needs to close itself before it can type passwords. Set delay here. This will give you more time to select window
+wait=3
+# delay to be used for :delay keyword
+delay=1
